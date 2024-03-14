@@ -1,0 +1,29 @@
+Entrevistador: Olá, como posso ajudá-lo hoje? Vamos começar com algumas perguntas básicas. Qual é o seu nome?
+Pessoa: Meu nome é João Souza.
+
+Entrevistador: Ótimo, João Souza! Qual é o seu email?
+Pessoa: Meu email é joao.souza@email.com.
+
+Entrevistador: Perfeito! E qual é o número do seu telefone celular?
+Pessoa: Meu número de telefone celular é (41) 66666-5555.
+
+Entrevistador: Agora, precisamos de algumas informações específicas sobre a manifestação. Qual é o órgão relacionado com a manifestação?
+Pessoa: O órgão relacionado é Departamento de Turismo.
+
+Entrevistador: Entendido. E qual é o local relacionado à sua manifestação?
+Pessoa: O local é Avenida Paulista, número 1000, São Paulo.
+
+Entrevistador: Certo. Qual é o serviço para o qual deve ser lançada a manifestação?
+Pessoa: O serviço é promoção de eventos turísticos.
+
+Entrevistador: Ótimo. Sobre o que você gostaria de falar?
+Pessoa: Eu gostaria de falar sobre melhoria da infraestrutura turística no Parque Ibirapuera.
+
+Entrevistador: Entendi. Quem são os envolvidos na sua manifestação?
+Pessoa: Os envolvidos são empresários do setor de turismo e visitantes.
+
+Entrevistador: Por último, pode descrever mais detalhes sobre sua manifestação?
+Pessoa: Claro, a manifestação é sobre importância de investir em atrativos turísticos para aumentar a visitação ao parque.
+
+Entrevistador: Muito obrigado pelas informações, João Souza! Vamos processar sua manifestação e entrar em contato em breve.
+
