@@ -58,10 +58,5 @@ def messages():
     """Renders the initial HTML page."""
     return render_template("messages.html")
 
-@app.route("/nosentiment")
-def nosentiment():
-    """Renders the initial HTML page."""
-    return render_template("no-sentiment.html")
-
 if __name__ == "__main__":
     app.run(debug=True)
