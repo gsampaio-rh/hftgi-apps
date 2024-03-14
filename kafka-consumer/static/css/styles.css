@@ -259,3 +259,58 @@ html {
     border: none;
     padding: 0;
 }
+
+/* WhatsApp-like chat styles */
+.chat-container {
+    display: flex;
+    flex-direction: column;
+    max-height: 500px;
+    /* Adjust based on your preference */
+    overflow-y: auto;
+}
+
+.chat-bubble {
+    background-color: #dcf8c6;
+    /* Light green background typical for WhatsApp */
+    margin-bottom: 8px;
+    padding: 10px 12px;
+    border-radius: 7.5px;
+    max-width: 80%;
+    word-wrap: break-word;
+    line-height: 1.4;
+    position: relative;
+}
+
+.chat-bubble::before {
+    content: "";
+    position: absolute;
+    width: 0;
+    height: 0;
+    bottom: 0;
+    left: -7px;
+    border: 10px solid transparent;
+    border-right-color: #dcf8c6;
+    border-bottom: 0;
+    margin-top: -5px;
+    margin-left: 1px;
+}
+
+.receiver {
+    align-self: flex-start;
+    background-color: #efefef;
+    /* White background for the receiver */
+}
+
+.receiver::before {
+    border-right-color: #ffffff;
+}
+
+.sender {
+    align-self: flex-end;
+    background-color: #dcf8c6;
+    /* Light green background for the sender */
+}
+
+.sender::before {
+    display: none;
+}

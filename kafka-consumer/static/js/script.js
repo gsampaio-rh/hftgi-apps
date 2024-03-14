@@ -17,15 +17,33 @@ source.onmessage = event => {
 function displayChatBallon(chatID, sentiment, conversation) {
     const sentimentClass = sentiment.includes("Negative") ? 'negative' : 'positive';
     const balloon = $(`<div class="speech-balloon ${sentimentClass}"><p>💬 ${chatID}</p></div>`);
-    balloon.data('conversation', conversation); // Store the conversation in the data attribute
+    // balloon.data('conversation', conversation); // Store the conversation in the data attribute
 
     balloon.on('click', function () {
-        // When a balloon is clicked, display the conversation in a modal
-        $('#conversationModalContent').text($(this).data('conversation'));
+        // When a balloon is clicked, parse the conversation and display it in a modal
+        const conversationHtml = formatConversationAsChat(conversation);
+        $('#conversationModalContent').html(conversationHtml);
         $('#conversationModal').modal('show');
     });
 
     $('#messageStream').prepend(balloon);
+}
+
+function formatConversationAsChat(conversationText) {
+    const lines = conversationText.trim().split('\n');
+    let conversationHtml = '<div class="chat-container">';
+    let bubbleColor = true;  // Start with the first color, e.g., green
+
+    lines.forEach(line => {
+        if (line) {
+            const bubbleClass = bubbleColor ? 'sender' : 'receiver';
+            conversationHtml += `<div class="chat-bubble ${bubbleClass}">${line}</div>`;
+            bubbleColor = !bubbleColor;  // Toggle color for next bubble
+        }
+    });
+
+    conversationHtml += '</div>';
+    return conversationHtml;
 }
 
 function displayMessageDetails(message) {
