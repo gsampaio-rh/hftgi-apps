@@ -13,71 +13,15 @@ logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
-# Inference Server Setup
-# inference_server_url = "http://hf-tgi-server.llms.svc.cluster.local:3000/"
-inference_server_url = "http://localhost:3000/"
+# Constants for the HF Inference server setup
+INFERENCE_SERVER_URL = "http://localhost:3000/"
 
-# Kafka setup
-kafka_server = "localhost:9092"  # Change this to your Kafka server address
-consumer_topic = "chat"
-producer_topic = "answer"
+# Constants for the Kafka server setup
+KAFKA_SERVER = "localhost:9092"
+CONSUMER_TOPIC = "chat"
+PRODUCER_TOPIC = "answer"
 
-consumer = KafkaConsumer(
-    consumer_topic,
-    bootstrap_servers=[kafka_server],
-    auto_offset_reset="earliest",
-    enable_auto_commit=True,
-    group_id="chat-group",
-    # value_deserializer=lambda x: json.loads(x.decode("utf-8")),
-)
-
-producer = KafkaProducer(
-    bootstrap_servers=[kafka_server],
-    value_serializer=lambda x: json.dumps(x).encode("utf-8"),
-)
-
-def read_conversation_file(file_path):
-    """Reads content from a specified file path."""
-    with open(file_path, "r", encoding="utf-8") as file:
-        txt = file.read()
-    return txt
-
-def convert_to_json(output):
-    # Extract the 'text' field which contains the structured information
-    structured_text = output.get("text", "")
-
-    # Define the keys we expect to find in the structured text
-    keys = [
-        "Name",
-        "Email",
-        "Phone Number",
-        "Department",
-        "Issue",
-        "Service",
-        "Additional Information",
-        "Detailed Description",
-    ]
-
-    # Initialize an empty dictionary to hold our extracted data
-    data_dict = {}
-
-    # Split the structured text by lines, then iterate over each line
-    for line in structured_text.split("\n"):
-        # For each line, check if it contains one of the keys
-        for key in keys:
-            if line.strip().startswith(f"- **{key}**"):
-                # Extract the value by removing the key part from the line
-                value = line.split(f"- **{key}**:")[1].strip()
-                # Handle special case for "Not available" or similar phrases
-                if value.lower() in ["not available", "não disponível"]:
-                    value = None
-                # Add the key-value pair to our dictionary
-                data_dict[key.replace(" ", "_").lower()] = value
-
-    # Convert the dictionary to a JSON string
-    json_output = json.dumps(data_dict, indent=4, ensure_ascii=False)
-    return json_output
-
+# Prompt Templates
 template = """
         Given the conversation below, extract key information in a structured and concise manner. The goal is to parse out identifiable details such as personal names, email addresses, phone numbers, and any specific concerns or requests mentioned. This extraction should culminate in a structured JSON output that includes the following fields:
 
@@ -99,98 +43,113 @@ template = """
         Note: Ensure your response is concise, avoiding repetition. If similar points are made more than once, summarize them in a single statement, focusing on providing a clear and structured summary of the conversation's key details.
         """
 
-sentiment_prompt_template = """
-        Given the text below, perform a sentiment analysis to classify the overall sentiment as either "Positive" or "Negative". The sentiment analysis should consider the tone, key phrases, and any explicit or implicit expressions of emotion in the text. 
+# Kafka Consumer Setup
+def create_kafka_consumer(server, topic, group_id):
+    """Initializes and returns a Kafka Consumer."""
+    return KafkaConsumer(
+        topic,
+        bootstrap_servers=[server],
+        auto_offset_reset="earliest",
+        enable_auto_commit=True,
+        group_id=group_id,
+        value_deserializer=lambda x: json.loads(x.decode("utf-8")),
+    )
 
-        After analyzing the sentiment, extract key information in a structured and concise manner if applicable. This includes personal names, email addresses, phone numbers, and any specific concerns or requests mentioned. The goal is to not only classify the sentiment of the text but also to parse out identifiable details that provide context to that sentiment.
+# Kafka Producer Setup
+def create_kafka_producer(server):
+    """Initializes and returns a Kafka Producer."""
+    return KafkaProducer(
+        bootstrap_servers=[server],
+        value_serializer=lambda x: json.dumps(x).encode("utf-8"),
+    )
 
-        The response should only include:
+def convert_to_json(output):
+    """Converts structured text to JSON format."""
+    structured_text = output.get("text", "")
+    keys = ["Name", "Email", "Phone Number", "Department", "Issue", "Service", "Additional Information", "Detailed Description"]
+    data_dict = {}
+    for line in structured_text.split("\n"):
+        for key in keys:
+            if line.strip().startswith(f"- **{key}**"):
+                value = line.split(f"- **{key}**:")[1].strip()
+                if value.lower() in ["not available", "não disponível"]:
+                    value = None
+                data_dict[key.replace(" ", "_").lower()] = value
+    return json.dumps(data_dict, indent=4, ensure_ascii=False)
 
-        - **Sentiment**: The overall sentiment of the text, classified either as "Positive" or "Negative".
-        
-        Text for Sentiment Analysis:
-        {text}
+# Initialize LLMs and Chains
+def setup_llm_chains(inference_url):
+    """
+    Initializes and configures the Large Language Model (LLM) Chains with the given inference server URL.
+    
+    This setup prepares an LLM for text generation by specifying behavior-modifying parameters to fine-tune
+    the responses generated by the model. It encapsulates the model within an LLMChain, ready for executing
+    text processing tasks using a predefined prompt template.
+    
+    Parameters:
+    - inference_url (str): URL of the inference server where the LLM is hosted, responsible for performing
+      the text generation tasks.
+    
+    Returns:
+    - LLMChain: An instance of LLMChain, combining a prompt template with the LLM for text processing.
+    
+    The HuggingFaceTextGenInference model is initialized with the following parameters:
+    - max_new_tokens (int): The maximum number of new tokens to generate. Set to 512, this limits the length
+      of the generated response, controlling output verbosity.
+    - top_k (int): Filters the generated predictions to the top-k probabilities before applying softmax.
+      Set to 10, it focuses model choices, reducing the randomness of the response.
+    - top_p (float): Nucleus sampling parameter controlling the cumulative probability cutoff. Set to 0.95,
+      it allows for more diverse responses by only considering the top 95% probable options.
+    - typical_p (float): Used to dynamically adjust top_p based on token probability distribution, aiming to
+      maintain a typical set of options. Set to 0.95, it works in tandem with top_p for dynamic adjustments.
+    - temperature (float): Controls the randomness of the output by scaling the logits before applying softmax.
+      Set to 0.1, it produces more deterministic output, favoring higher probability options.
+    - repetition_penalty (float): Increases/decreases the likelihood of previously generated tokens. Set to 1.175,
+      it slightly penalizes repetition, encouraging more varied outputs.
+    
+    These parameters are carefully chosen to balance creativity, coherence, and control in the generated text,
+    making the LLM more suitable for structured information extraction and analysis tasks.
+    """
+    qa_chain_prompt = PromptTemplate.from_template(template)
+    
+    llm = HuggingFaceTextGenInference(
+        inference_server_url=inference_url,
+        max_new_tokens=512,
+        top_k=10,
+        top_p=0.95,
+        typical_p=0.95,
+        temperature=0.1,
+        repetition_penalty=1.175,
+    )
+    llm_chain = LLMChain(prompt=qa_chain_prompt, llm=llm)
+    return llm_chain
 
-        Ensure the response adheres to privacy and ethical guidelines, simplifying the information while preserving its original context and meaning. Avoid making assumptions beyond the provided data. Focus on providing a clear and structured summary of the text's sentiment and any key details.
-        """
+def main():
+    consumer = create_kafka_consumer(KAFKA_SERVER, CONSUMER_TOPIC, "chat-group")
+    producer = create_kafka_producer(KAFKA_SERVER)
+    llm_chain = setup_llm_chains(INFERENCE_SERVER_URL)
 
-QA_CHAIN_PROMPT = PromptTemplate.from_template(template)
+    for message in consumer:
+        try:
+            conversation_text = message.value['conversation']
+            conversation_id = str(uuid.uuid4())
+            logging.info(f"Processing conversation ID: {conversation_id}")
 
-SENTIMENT_CHAIN_PROMPT = PromptTemplate.from_template(sentiment_prompt_template)
+            # Process the conversation
+            response = llm_chain.invoke({"conversation": conversation_text})
+            json_response = convert_to_json(response)
 
-embeddings = HuggingFaceEmbeddings()
+            # Prepare and send the response
+            result = {
+                "id": conversation_id,
+                "conversation": conversation_text,
+                "json_response": json.loads(json_response)
+            }
+            producer.send(PRODUCER_TOPIC, value=result)
+            logging.info("Processed and sent conversation to 'answer' topic.")
 
-# Basic llm object definition, no text streaming
-llm = HuggingFaceTextGenInference(
-    inference_server_url=inference_server_url,
-    max_new_tokens=512,
-    top_k=10,
-    top_p=0.95,
-    typical_p=0.95,
-    temperature=0.1,
-    repetition_penalty=1.175,
-)
+        except Exception as e:
+            logging.error(f"Error processing message: {e}", exc_info=True)
 
-# chain = QA_CHAIN_PROMPT | llm
-
-llm_chain = LLMChain(prompt=QA_CHAIN_PROMPT, llm=llm)
-
-llm_sentiment_chain = LLMChain(prompt=SENTIMENT_CHAIN_PROMPT, llm=llm)
-
-# file_path = "sample_chat.txt"
-# conversation_text = read_conversation_file(file_path)
-# answer = chain.invoke({"conversation": conversation_text})
-# print(answer)
-
-for message in consumer:
-    try:
-        # Decode the message value from bytes to a string and then load it as JSON
-        conversation_data = json.loads(message.value.decode('utf-8'))
-        conversation_text = conversation_data['conversation']
-
-        # Generate a unique ID for the conversation
-        conversation_id = str(uuid.uuid4())
-
-        logging.info(f"Conversation ID: {conversation_id}")
-        logging.info(f"CHAT: -> {conversation_text}")
-
-        # Process the conversation with the chain
-        response = llm_chain.invoke({"conversation": conversation_text})
-
-        # logging.info(f"RESPONSE: -> {response}")
-
-        # Convert the structured response to JSON
-        json_response = convert_to_json(response)
-
-        # Convert the json_response string back to a dictionary for inclusion
-        json_response_dict = json.loads(json_response)
-
-        # Extract the "detailed_description" field directly from the dictionary, if present and not empty; otherwise, use "issue"
-        issue_text = json_response_dict.get("detailed_description", "") or json_response_dict.get("issue", "")
-
-        # Now, use 'issue_text' as input for the sentiment analysis chain
-        sentiment_result = llm_sentiment_chain.invoke({"text": issue_text})
-
-        # Add the sentiment analysis result to the dictionary
-        json_response_dict['sentiment_analysis'] = sentiment_result
-
-        # Prepare the result dictionary with the conversation ID, the conversation text,
-        # and the structured JSON response
-        result = {
-            "id": conversation_id,
-            "conversation": conversation_text,
-            "json_response": json_response_dict
-        }
-
-        # Serialize the 'result' dictionary to a JSON-formatted string
-        result_json = json.dumps(result, indent=4, ensure_ascii=False)
-
-        # Log the JSON-formatted string of 'result'
-        logging.info(f"Result JSON: -> {result_json}")
-
-        # Send the processed result to the Kafka 'answer' topic
-        producer.send(producer_topic, value=result_json)
-        logging.info("Processed and sent conversation to 'answer' topic.")
-
-    except Exception as e:
-        logging.error(f"Error processing message: {e}", exc_info=True)
+if __name__ == "__main__":
+    main()
