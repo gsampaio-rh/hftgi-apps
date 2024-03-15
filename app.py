@@ -1,5 +1,4 @@
 # Imports
-from langchain.embeddings.huggingface import HuggingFaceEmbeddings
 from langchain.llms import HuggingFaceTextGenInference
 from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
@@ -7,6 +6,7 @@ from kafka import KafkaConsumer, KafkaProducer
 import json
 import logging
 import uuid
+import os
 
 # Configure logging
 logging.basicConfig(
@@ -14,33 +14,38 @@ logging.basicConfig(
 )
 
 # Constants for the HF Inference server setup
-INFERENCE_SERVER_URL = "http://localhost:3000/"
+INFERENCE_SERVER_URL = os.getenv("INFERENCE_SERVER_URL", "http://localhost:3000/")
 
 # Constants for the Kafka server setup
-KAFKA_SERVER = "localhost:9092"
-CONSUMER_TOPIC = "chat"
-PRODUCER_TOPIC = "answer"
+KAFKA_SERVER = os.getenv("KAFKA_SERVER", "localhost:9092")
+CONSUMER_TOPIC = os.getenv("CONSUMER_TOPIC", "chat")
+PRODUCER_TOPIC = os.getenv("PRODUCER_TOPIC", "answer")
 
 # Prompt Templates
 template = """
-        Given the conversation below, extract key information in a structured and concise manner. The goal is to parse out identifiable details such as personal names, email addresses, phone numbers, and any specific concerns or requests mentioned. This extraction should culminate in a structured JSON output that includes the following fields:
+        Analyze the provided conversation transcript to extract key information, presenting it in a structured and concise manner. Your task is to identify and parse out critical details such as personal names, email addresses, phone numbers, and any specific concerns or requests mentioned. The outcome should be a structured JSON output, containing the following fields:
 
-        - **Name**: The name(s) of the person(s) involved.
-        - **Email**: Email address(es) mentioned.
-        - **Phone Number**: Phone number(s) provided.
-        - **Location**: Any specific locations mentioned in relation to the issue or service.
-        - **Department**: The department or organization related if specified.
-        - **Issue**: Brief description of the main issue(s) discussed.
-        - **Service**: Specific service(s) mentioned in connection with the issue.
-        - **Additional Information**: Any other relevant details or stakeholders mentioned.
-        - **Detailed Description**: A comprehensive summary of the complaint or request, including any specific outcomes desired.
+        - **Name**: The full name(s) of the individual(s) involved.
+        - **Email**: The email address(es) cited.
+        - **Phone Number**: Any phone number(s) provided.
+        - **Location**: Details of any specific locations related to the issue or service.
+        - **Department**: The department or entity involved, if mentioned.
+        - **Issue**: A succinct description of the primary issue(s) discussed.
+        - **Service**: The specific service(s) referenced in relation to the issue.
+        - **Additional Information**: Other pertinent details or stakeholders mentioned.
+        - **Detailed Description**: An in-depth summary of the concern or request, including desired outcomes, if any.
 
-        The response should adhere to privacy and ethical guidelines, simplifying the information while preserving its original context and meaning. Assumptions beyond the provided data should be avoided.
+        Ensure your response:
+        - Adheres strictly to privacy and ethical guidelines, especially when handling personal information. Where direct extraction is not possible or could breach privacy, anonymize or generalize the data.
+        - Is constructed in a clear, JSON-compatible format, avoiding assumptions not directly supported by the conversation data.
+        - Preserves the original context and meaning of the conversation, summarizing repeated points once to maintain conciseness.
+
+        In cases of ambiguous or inferred information, provide your best interpretation based on the context, noting any assumptions made.
 
         Conversation Transcript:
         {conversation}
 
-        Note: Ensure your response is concise, avoiding repetition. If similar points are made more than once, summarize them in a single statement, focusing on providing a clear and structured summary of the conversation's key details.
+        Note: Strive for clarity and brevity in your response, focusing on delivering a well-structured summary of the key conversation details.
         """
 
 # Kafka Consumer Setup

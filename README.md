@@ -5,8 +5,8 @@
 ## Components
 
 - **[LangChain](https://github.com/hwchase17/langchain)**: Provides the backbone for generating responses and analyzing texts using Large Language Models.
-- **Kafka Integration**: Utilizes KafkaConsumer and KafkaProducer for consuming and producing messages within a Kafka cluster.
 - **[HuggingFace LLMs](https://huggingface.co/models)**: Leverages HuggingFace's APIs for text generation and embeddings to enhance response quality and contextual understanding.
+- **Kafka Integration**: Utilizes KafkaConsumer and KafkaProducer for consuming and producing messages within a Kafka cluster.
 
 ## Features
 
@@ -17,10 +17,20 @@
 
 ## Prerequisites
 
-- Python 3.x
-- Kafka cluster setup
-- Access to HuggingFace API for embeddings and text generation
-- Necessary Python libraries: `langchain`, `kafka-python`, `json`, `logging`, `uuid`
+Before you begin, ensure you have the following requirements set up and accessible:
+
+- **Python 3.x**: A current version of Python is necessary for running the code and scripts included in this project.
+- **Kafka Cluster Setup**: A properly configured Kafka cluster is essential for message queuing and processing. This project uses Kafka for real-time messaging and data flow between components.
+- **Necessary Python Libraries**: Ensure the following libraries are installed in your Python environment:
+  - `langchain` - For interacting with Large Language Models and processing text.
+  - `kafka-python` - For Kafka integration, allowing communication with Kafka topics.
+  - `json` - For working with JSON data, crucial for processing and generating structured information.
+  - `logging` - For logging information, errors, and process details.
+  - `uuid` - For generating unique identifiers, useful in tracking and managing conversation data.
+
+Additionally, you'll need to provision an inference server for the text generation API to interact with the HuggingFace models:
+
+- **Inference Server Setup**: Check [this guide](https://github.com/gsampaio-rh/hftgi-llms) on how to provision an inference server for the text generation API. This server will handle the actual inference tasks using HuggingFace's Large Language Models.
 
 ## How the application works
 
