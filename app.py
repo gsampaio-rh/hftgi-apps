@@ -139,10 +139,15 @@ def main():
             conversation_text = message.value['conversation']
             conversation_id = str(uuid.uuid4())
             logging.info(f"Processing conversation ID: {conversation_id}")
-
+            logging.info(f"Chat: {conversation_text}")
+            
             # Process the conversation
             response = llm_chain.invoke({"conversation": conversation_text})
+            logging.info(f"LLM Response: {response}")
+            
+            # JSON
             json_response = convert_to_json(response)
+            logging.info(f"JSON RESPONSE: {json_response}")
 
             # Prepare and send the response
             result = {

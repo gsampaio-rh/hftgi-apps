@@ -1,0 +1,16 @@
+{
+    "id": "78bd0fea-5c5f-4a7c-97ca-9be3803fe21d",
+    "conversation": "Entrevistador: Olá, como posso ajudá-lo hoje? Vamos começar com algumas perguntas básicas. Qual é o seu nome?\nPessoa: Meu nome é Maria Costa.\n\nEntrevistador: Ótimo, Maria Costa! Qual é o seu email?\nPessoa: Meu email é maria.costa@email.com.\n\nEntrevistador: Perfeito! E qual é o número do seu telefone celular?\nPessoa: Meu número de telefone celular é (41) 66666-5555.\n\nEntrevistador: Agora, precisamos de algumas informações específicas sobre a manifestação. Qual é o órgão relacionado com a manifestação?\nPessoa: O órgão relacionado é Departamento de Trânsito.\n\nEntrevistador: Entendido. E qual é o local relacionado à sua manifestação?\nPessoa: O local é Rua XV de Novembro, número 300, São Paulo.\n\nEntrevistador: Certo. Qual é o serviço para o qual deve ser lançada a manifestação?\nPessoa: O serviço é manutenção de semáforos.\n\nEntrevistador: Ótimo. Sobre o que você gostaria de falar?\nPessoa: Eu gostaria de falar sobre demora na manutenção dos semáforos que está causando muitos congestionamentos.\n\nEntrevistador: Entendi. Quem são os envolvidos na sua manifestação?\nPessoa: Os envolvidos são moradores da região e os motoristas.\n\nEntrevistador: Por último, pode descrever mais detalhes sobre sua manifestação?\nPessoa: Claro, a manifestação é sobre urgência na manutenção dos semáforos na Avenida Paulista, causada por congestionamentos e acidentes.\n\nEntrevistador: Muito obrigado pelas informações, Maria Costa! Vamos processar sua manifestação e entrar em contato em breve.\n\n",
+    "json_response": {
+        "name": "Maria Costa",
+        "email": "maria.costa@email.com",
+        "phone_number": "(41) 66666-5555",
+        "department": "Departamento de Trânsito",
+        "issue": "Manifestação sobre urgência na manutenção de semáforos na Avenida Paulista",
+        "service": "Manutenção de semáforos",
+        "additional_information": "Manutenção de semáforos na Avenida Paulista, causada por congestionamentos e acidentes, com a urgência de manutenção.",
+        "sentiment_analysis": {
+            "text": "\nThe sentiment of the text is \"Positive\". The text discusses a public event and the importance of maintaining the infrastructure of the event. The text also mentions the importance of ensuring the safety of attendees and the need for efficient communication."
+        }
+    }
+}
