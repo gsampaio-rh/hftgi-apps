@@ -1,4 +1,5 @@
 # Imports
+import argparse
 from langchain.llms import HuggingFaceTextGenInference
 from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
@@ -15,7 +16,8 @@ logging.basicConfig(
 )
 
 # Constants for the HF Inference server setup
-INFERENCE_SERVER_URL = os.getenv("INFERENCE_SERVER_URL", "http://localhost:3000/")
+# INFERENCE_SERVER_URL = os.getenv("INFERENCE_SERVER_URL", "http://localhost:3000/")
+INFERENCE_SERVER_URL = os.getenv("INFERENCE_SERVER_URL", "https://hf-tgi-server-llms.apps.cluster-h95p2.sandbox791.opentlc.com")
 
 # Constants for the Kafka server setup
 KAFKA_SERVER = os.getenv("KAFKA_SERVER", "localhost:9092")
@@ -23,45 +25,42 @@ CONSUMER_TOPIC = os.getenv("CONSUMER_TOPIC", "chat")
 PRODUCER_TOPIC = os.getenv("PRODUCER_TOPIC", "answer")
 CSV_FILE_PATH = "conversation_results.csv"
 
-# Prompt Templates
+def parse_args():
+    """Parse command-line arguments."""
+    parser = argparse.ArgumentParser(description="Run the application in local or Kafka mode.")
+    parser.add_argument("--local-mode", action="store_true", help="Run the application in local mode without Kafka.")
+    return parser.parse_args()
+
 template = """
-        Analyze the provided conversation transcript to extract key information, presenting it in a structured and concise manner. Your task is to identify and parse out critical details such as personal names, email addresses, phone numbers, and any specific concerns or requests mentioned. The outcome should be a structured JSON output, containing the following fields:
+    As an AI expert assistant, your task is to analyze the provided conversation and directly extract and format specific information into a structured JSON object. Do not include any text other than the JSON object.
 
-        - **Name**: The full name(s) of the individual(s) involved.
-        - **Email**: The email address(es) cited.
-        - **Phone Number**: Any phone number(s) provided.
-        - **Location**: Details of any specific locations related to the issue or service.
-        - **Department**: The department or entity involved, if mentioned.
-        - **Issue**: A succinct description of the primary issue(s) discussed.
-        - **Service**: The specific service(s) referenced in relation to the issue.
-        - **Additional Information**: Other pertinent details or stakeholders mentioned.
-        - **Detailed Description**: An in-depth summary of the concern or request, including desired outcomes, if any.
-        
-        Expected Output Format:
-        {{
-        "Name": [...],
-        "Email": [...],
-        "Phone Number": [...],
-        "Location": [...],
-        "Department": [...],
-        "Issue": [...],
-        "Service": [...],
-        "Additional Information": [...],
-        "Detailed Description": [...]
-        }}
+    Conversation Transcript:
+    {conversation}
 
-        Ensure your response:
-        - Adheres strictly to privacy and ethical guidelines, especially when handling personal information. Where direct extraction is not possible or could breach privacy, anonymize or generalize the data.
-        - Is constructed in a clear, JSON-compatible format, avoiding assumptions not directly supported by the conversation data.
-        - Preserves the original context and meaning of the conversation, summarizing repeated points once to maintain conciseness.
+    Based on the details in the conversation, construct a JSON object with the following fields:
+    - "Name": "The full name of the individual involved."
+    - "Email": "The email address provided."
+    - "Phone Number": "The contact phone number."
+    - "Location": "Specific location mentioned in relation to the issue."
+    - "Department": "The department or agency mentioned."
+    - "Issue": "Primary issue or concern raised."
+    - "Service": "Specific service being discussed."
+    - "Additional Information": "Any extra relevant details mentioned."
+    - "Detailed Description": "A summary of the situation or problem as described."
 
-        In cases of ambiguous or inferred information, provide your best interpretation based on the context, noting any assumptions made.
-
-        Conversation Transcript:
-        {conversation}
-
-        Note: Strive for clarity and brevity in your response, focusing on delivering a well-structured summary of the key conversation details.
-        """
+    Ensure the output is a clean JSON object:
+    {{
+    "Name": "",
+    "Email": "",
+    "Phone Number": "",
+    "Location": "",
+    "Department": "",
+    "Issue": "",
+    "Service": "",
+    "Additional Information": "",
+    "Detailed Description": ""
+    }}
+"""
 
 def save_to_csv(file_path, data_dict):
     """
@@ -166,42 +165,79 @@ def setup_llm_chains(inference_url):
     llm_chain = LLMChain(prompt=qa_chain_prompt, llm=llm)
     return llm_chain
 
-def main():
+def run_kafka_mode():
+    """Set up and process data using Kafka consumers and producers."""
     consumer = create_kafka_consumer(KAFKA_SERVER, CONSUMER_TOPIC, "chat-group")
     producer = create_kafka_producer(KAFKA_SERVER)
-    llm_chain = setup_llm_chains(INFERENCE_SERVER_URL)
 
     for message in consumer:
         try:
-            conversation_text = message.value['conversation']
-            conversation_id = str(uuid.uuid4())
-            logging.info(f"Processing conversation ID: {conversation_id}")
-            logging.info(f"Chat: {conversation_text}")
             
-            # Process the conversation
-            response = llm_chain.invoke({"conversation": conversation_text})
-            logging.info(f"LLM Response: {response}")
+            # conversation_text = message.value['conversation']
+            # conversation_id = str(uuid.uuid4())
+            # logging.info(f"Processing conversation ID: {conversation_id}")
+            # logging.info(f"Chat: {conversation_text}")
             
-            # JSON
-            json_response = convert_to_json(response)
-            logging.info(f"JSON RESPONSE: {json_response}")
-
-            # Prepare and send the response
-            result = {
-                "id": conversation_id,
-                "conversation": conversation_text,
-                "json_response": json.loads(json_response)
-            }
+            # response = llm_chain.invoke({"conversation": conversation_text})
+            # json_response = convert_to_json(response)
+            result = process_conversation(message.value['conversation'])
+            # result = {"id": conversation_id, "conversation": conversation_text, "json_response": json.loads(json_response)}
             producer.send(PRODUCER_TOPIC, value=result)
             logging.info("Processed and sent conversation to 'answer' topic.")
             
-            # Save the result to a CSV file
-            save_to_csv(CSV_FILE_PATH, result)
-            logging.info(f"Saved conversation ID: {conversation_id} to CSV file.")
-
-
         except Exception as e:
-            logging.error(f"Error processing message: {e}", exc_info=True)
+            logging.error(f"Error processing Kafka message: {e}", exc_info=True)
+
+def process_conversation(conversation_text):
+    """Placeholder for processing conversation logic."""
+    llm_chain = setup_llm_chains(INFERENCE_SERVER_URL)
+
+    conversation_text = conversation_text
+    conversation_id = str(uuid.uuid4())
+    logging.info(f"Processing conversation ID: {conversation_id}")
+    logging.info(f"Chat: {conversation_text}")
+
+    response = llm_chain.invoke({"conversation": conversation_text})
+    logging.info(f"LLM RESPONSE: {response['text']}")
+
+    json_response = convert_to_json(response)
+    result = {"id": conversation_id, "conversation": conversation_text, "json_response": json.loads(json_response)}
+
+    return result
+
+def run_local_mode(directory_path):
+    """Process all text files in the given directory."""
+    try:
+        # List all files in the specified directory
+        files = [f for f in os.listdir(directory_path) if f.endswith('.txt')]
+
+        # Process each file
+        for file_name in files:
+            file_path = os.path.join(directory_path, file_name)
+            logging.info(f"Processing file: {file_path}")
+
+            with open(file_path, 'r', encoding='utf-8') as file:
+                conversation_text = file.read().strip()
+                if conversation_text:
+                    logging.info(f"Processing conversation from {file_name}")
+                    response = process_conversation(conversation_text)
+                    logging.info(f"Processed Response: {response}")
+                else:
+                    logging.info(f"No content in {file_name}")
+
+    except FileNotFoundError:
+        logging.error(f"The directory {directory_path} does not exist or is inaccessible.")
+    except Exception as e:
+        logging.error(f"Error processing directory data: {e}", exc_info=True)
+
+def main():
+    args = parse_args()
+
+    if args.local_mode:
+        logging.info("Running in local mode.")
+        run_local_mode("kafka-producer/conversation_samples")
+    else:
+        run_kafka_mode()
 
 if __name__ == "__main__":
     main()
