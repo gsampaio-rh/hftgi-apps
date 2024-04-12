@@ -164,3 +164,12 @@ Contributions to the `hftgi-apps` project are welcome. Whether you're fixing a b
 ## License
 
 The `hftgi-apps` project is open-sourced under a specified license, allowing for modification, personal use, and distribution within the terms of that license. Please review the license details for more information on your rights and restrictions.
+
+## TODO
+
+### Fine Tuning
+
+https://predibase.com/blog/how-to-fine-tune-llama-70b-for-structured-json-generation-with-ludwig
+https://www.nature.com/articles/s41467-024-45563-x
+https://medium.com/@philipp.warmer/conditional-relationship-extraction-5bd4cbe52860
+https://medium.com/@grisanti.isidoro/named-entity-recognition-with-llms-extract-conversation-metadata-94d5536178f2

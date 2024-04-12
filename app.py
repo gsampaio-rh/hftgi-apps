@@ -7,6 +7,7 @@ import json
 import logging
 import uuid
 import os
+import csv
 
 # Configure logging
 logging.basicConfig(
@@ -20,6 +21,7 @@ INFERENCE_SERVER_URL = os.getenv("INFERENCE_SERVER_URL", "http://localhost:3000/
 KAFKA_SERVER = os.getenv("KAFKA_SERVER", "localhost:9092")
 CONSUMER_TOPIC = os.getenv("CONSUMER_TOPIC", "chat")
 PRODUCER_TOPIC = os.getenv("PRODUCER_TOPIC", "answer")
+CSV_FILE_PATH = "conversation_results.csv"
 
 # Prompt Templates
 template = """
@@ -34,6 +36,19 @@ template = """
         - **Service**: The specific service(s) referenced in relation to the issue.
         - **Additional Information**: Other pertinent details or stakeholders mentioned.
         - **Detailed Description**: An in-depth summary of the concern or request, including desired outcomes, if any.
+        
+        Expected Output Format:
+        {{
+        "Name": [...],
+        "Email": [...],
+        "Phone Number": [...],
+        "Location": [...],
+        "Department": [...],
+        "Issue": [...],
+        "Service": [...],
+        "Additional Information": [...],
+        "Detailed Description": [...]
+        }}
 
         Ensure your response:
         - Adheres strictly to privacy and ethical guidelines, especially when handling personal information. Where direct extraction is not possible or could breach privacy, anonymize or generalize the data.
@@ -47,6 +62,28 @@ template = """
 
         Note: Strive for clarity and brevity in your response, focusing on delivering a well-structured summary of the key conversation details.
         """
+
+def save_to_csv(file_path, data_dict):
+    """
+    Saves a dictionary of conversation results to a CSV file, flattening any nested JSON structures.
+
+    Parameters:
+    - file_path (str): Path to the CSV file where the data will be saved.
+    - data_dict (dict): Dictionary containing the conversation data to be saved.
+    """
+    with open(file_path, 'a', newline='', encoding='utf-8') as csvfile:
+        # Flatten the json_response dict into the main dict
+        data_dict.update(data_dict.pop('json_response'))
+        
+        fieldnames = data_dict.keys()
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        
+        # Check if the file is empty to write headers
+        csvfile.seek(0, 2)  # Move to the end of the file
+        if csvfile.tell() == 0:  # Check if file is empty
+            writer.writeheader()  # Write headers if file is empty
+        
+        writer.writerow(data_dict)
 
 # Kafka Consumer Setup
 def create_kafka_consumer(server, topic, group_id):
@@ -157,6 +194,11 @@ def main():
             }
             producer.send(PRODUCER_TOPIC, value=result)
             logging.info("Processed and sent conversation to 'answer' topic.")
+            
+            # Save the result to a CSV file
+            save_to_csv(CSV_FILE_PATH, result)
+            logging.info(f"Saved conversation ID: {conversation_id} to CSV file.")
+
 
         except Exception as e:
             logging.error(f"Error processing message: {e}", exc_info=True)
