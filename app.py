@@ -1,243 +1,75 @@
-# Imports
+# app.py
 import argparse
-from langchain.llms import HuggingFaceTextGenInference
-from langchain.chains import LLMChain
-from langchain.prompts import PromptTemplate
-from kafka import KafkaConsumer, KafkaProducer
-import json
 import logging
-import uuid
-import os
-import csv
+from config.config_manager import config
+from services.kafka_service import create_kafka_consumer, create_kafka_producer, send_message, receive_messages
+from llms.llm_config import llm_config
+from utilities.helpers import pretty_print_json, process_conversation
 
 # Configure logging
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
-)
-
-# Constants for the HF Inference server setup
-# INFERENCE_SERVER_URL = os.getenv("INFERENCE_SERVER_URL", "http://localhost:3000/")
-INFERENCE_SERVER_URL = os.getenv("INFERENCE_SERVER_URL", "https://hf-tgi-server-llms.apps.cluster-h95p2.sandbox791.opentlc.com")
-
-# Constants for the Kafka server setup
-KAFKA_SERVER = os.getenv("KAFKA_SERVER", "localhost:9092")
-CONSUMER_TOPIC = os.getenv("CONSUMER_TOPIC", "chat")
-PRODUCER_TOPIC = os.getenv("PRODUCER_TOPIC", "answer")
-CSV_FILE_PATH = "conversation_results.csv"
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 def parse_args():
     """Parse command-line arguments."""
-    parser = argparse.ArgumentParser(description="Run the application in local or Kafka mode.")
+    parser = argparse.ArgumentParser(description="Run the AI model in local or Kafka mode.")
     parser.add_argument("--local-mode", action="store_true", help="Run the application in local mode without Kafka.")
+    parser.add_argument("--directory-path", type=str, default="data/conversations", help="Directory path for local mode data processing.")
     return parser.parse_args()
 
-template = """
-    As an AI expert assistant, your task is to analyze the provided conversation and directly extract and format specific information into a structured JSON object. Do not include any text other than the JSON object.
-
-    Conversation Transcript:
-    {conversation}
-
-    Based on the details in the conversation, construct a JSON object with the following fields:
-    - "Name": "The full name of the individual involved."
-    - "Email": "The email address provided."
-    - "Phone Number": "The contact phone number."
-    - "Location": "Specific location mentioned in relation to the issue."
-    - "Department": "The department or agency mentioned."
-    - "Issue": "Primary issue or concern raised."
-    - "Service": "Specific service being discussed."
-    - "Additional Information": "Any extra relevant details mentioned."
-    - "Detailed Description": "A summary of the situation or problem as described."
-
-    Ensure the output is a clean JSON object:
-    {{
-    "Name": "",
-    "Email": "",
-    "Phone Number": "",
-    "Location": "",
-    "Department": "",
-    "Issue": "",
-    "Service": "",
-    "Additional Information": "",
-    "Detailed Description": ""
-    }}
-"""
-
-def save_to_csv(file_path, data_dict):
-    """
-    Saves a dictionary of conversation results to a CSV file, flattening any nested JSON structures.
-
-    Parameters:
-    - file_path (str): Path to the CSV file where the data will be saved.
-    - data_dict (dict): Dictionary containing the conversation data to be saved.
-    """
-    with open(file_path, 'a', newline='', encoding='utf-8') as csvfile:
-        # Flatten the json_response dict into the main dict
-        data_dict.update(data_dict.pop('json_response'))
-        
-        fieldnames = data_dict.keys()
-        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-        
-        # Check if the file is empty to write headers
-        csvfile.seek(0, 2)  # Move to the end of the file
-        if csvfile.tell() == 0:  # Check if file is empty
-            writer.writeheader()  # Write headers if file is empty
-        
-        writer.writerow(data_dict)
-
-# Kafka Consumer Setup
-def create_kafka_consumer(server, topic, group_id):
-    """Initializes and returns a Kafka Consumer."""
-    return KafkaConsumer(
-        topic,
-        bootstrap_servers=[server],
-        auto_offset_reset="earliest",
-        enable_auto_commit=True,
-        group_id=group_id,
-        value_deserializer=lambda x: json.loads(x.decode("utf-8")),
-    )
-
-# Kafka Producer Setup
-def create_kafka_producer(server):
-    """Initializes and returns a Kafka Producer."""
-    return KafkaProducer(
-        bootstrap_servers=[server],
-        value_serializer=lambda x: json.dumps(x).encode("utf-8"),
-    )
-
-def convert_to_json(output):
-    """Converts structured text to JSON format."""
-    structured_text = output.get("text", "")
-    keys = ["Name", "Email", "Phone Number", "Department", "Issue", "Service", "Additional Information", "Detailed Description"]
-    data_dict = {}
-    for line in structured_text.split("\n"):
-        for key in keys:
-            if line.strip().startswith(f"- **{key}**"):
-                value = line.split(f"- **{key}**:")[1].strip()
-                if value.lower() in ["not available", "não disponível"]:
-                    value = None
-                data_dict[key.replace(" ", "_").lower()] = value
-    return json.dumps(data_dict, indent=4, ensure_ascii=False)
-
-# Initialize LLMs and Chains
-def setup_llm_chains(inference_url):
-    """
-    Initializes and configures the Large Language Model (LLM) Chains with the given inference server URL.
-    
-    This setup prepares an LLM for text generation by specifying behavior-modifying parameters to fine-tune
-    the responses generated by the model. It encapsulates the model within an LLMChain, ready for executing
-    text processing tasks using a predefined prompt template.
-    
-    Parameters:
-    - inference_url (str): URL of the inference server where the LLM is hosted, responsible for performing
-      the text generation tasks.
-    
-    Returns:
-    - LLMChain: An instance of LLMChain, combining a prompt template with the LLM for text processing.
-    
-    The HuggingFaceTextGenInference model is initialized with the following parameters:
-    - max_new_tokens (int): The maximum number of new tokens to generate. Set to 512, this limits the length
-      of the generated response, controlling output verbosity.
-    - top_k (int): Filters the generated predictions to the top-k probabilities before applying softmax.
-      Set to 10, it focuses model choices, reducing the randomness of the response.
-    - top_p (float): Nucleus sampling parameter controlling the cumulative probability cutoff. Set to 0.95,
-      it allows for more diverse responses by only considering the top 95% probable options.
-    - typical_p (float): Used to dynamically adjust top_p based on token probability distribution, aiming to
-      maintain a typical set of options. Set to 0.95, it works in tandem with top_p for dynamic adjustments.
-    - temperature (float): Controls the randomness of the output by scaling the logits before applying softmax.
-      Set to 0.1, it produces more deterministic output, favoring higher probability options.
-    - repetition_penalty (float): Increases/decreases the likelihood of previously generated tokens. Set to 1.175,
-      it slightly penalizes repetition, encouraging more varied outputs.
-    
-    These parameters are carefully chosen to balance creativity, coherence, and control in the generated text,
-    making the LLM more suitable for structured information extraction and analysis tasks.
-    """
-    qa_chain_prompt = PromptTemplate.from_template(template)
-    
-    llm = HuggingFaceTextGenInference(
-        inference_server_url=inference_url,
-        max_new_tokens=512,
-        top_k=10,
-        top_p=0.95,
-        typical_p=0.95,
-        temperature=0.1,
-        repetition_penalty=1.175,
-    )
-    llm_chain = LLMChain(prompt=qa_chain_prompt, llm=llm)
-    return llm_chain
+def handle_message(message):
+    """Process messages received from Kafka."""
+    response = llm_config.invoke(message.value['conversation'])
+    pretty_print_json(response)  # For demonstration, print the processed result
+    send_message(producer, config.producer_topic, response)
 
 def run_kafka_mode():
     """Set up and process data using Kafka consumers and producers."""
-    consumer = create_kafka_consumer(KAFKA_SERVER, CONSUMER_TOPIC, "chat-group")
-    producer = create_kafka_producer(KAFKA_SERVER)
+    consumer = create_kafka_consumer(config.consumer_topic, "chat-group")
+    producer = create_kafka_producer()
 
-    for message in consumer:
-        try:
-            
-            # conversation_text = message.value['conversation']
-            # conversation_id = str(uuid.uuid4())
-            # logging.info(f"Processing conversation ID: {conversation_id}")
-            # logging.info(f"Chat: {conversation_text}")
-            
-            # response = llm_chain.invoke({"conversation": conversation_text})
-            # json_response = convert_to_json(response)
-            result = process_conversation(message.value['conversation'])
-            # result = {"id": conversation_id, "conversation": conversation_text, "json_response": json.loads(json_response)}
-            producer.send(PRODUCER_TOPIC, value=result)
-            logging.info("Processed and sent conversation to 'answer' topic.")
-            
-        except Exception as e:
-            logging.error(f"Error processing Kafka message: {e}", exc_info=True)
-
-def process_conversation(conversation_text):
-    """Placeholder for processing conversation logic."""
-    llm_chain = setup_llm_chains(INFERENCE_SERVER_URL)
-
-    conversation_text = conversation_text
-    conversation_id = str(uuid.uuid4())
-    logging.info(f"Processing conversation ID: {conversation_id}")
-    logging.info(f"Chat: {conversation_text}")
-
-    response = llm_chain.invoke({"conversation": conversation_text})
-    logging.info(f"LLM RESPONSE: {response['text']}")
-
-    json_response = convert_to_json(response)
-    result = {"id": conversation_id, "conversation": conversation_text, "json_response": json.loads(json_response)}
-
-    return result
+    receive_messages(consumer, handle_message)
 
 def run_local_mode(directory_path):
-    """Process all text files in the given directory."""
-    try:
-        # List all files in the specified directory
-        files = [f for f in os.listdir(directory_path) if f.endswith('.txt')]
+    """Process all text files in the given directory as conversations."""
+    from os import listdir
+    from os.path import isfile, join
 
-        # Process each file
-        for file_name in files:
-            file_path = os.path.join(directory_path, file_name)
-            logging.info(f"Processing file: {file_path}")
+    files = [f for f in listdir(directory_path) if isfile(join(directory_path, f)) and f.endswith('.txt')]
 
-            with open(file_path, 'r', encoding='utf-8') as file:
-                conversation_text = file.read().strip()
-                if conversation_text:
-                    logging.info(f"Processing conversation from {file_name}")
-                    response = process_conversation(conversation_text)
-                    logging.info(f"Processed Response: {response}")
-                else:
-                    logging.info(f"No content in {file_name}")
-
-    except FileNotFoundError:
-        logging.error(f"The directory {directory_path} does not exist or is inaccessible.")
-    except Exception as e:
-        logging.error(f"Error processing directory data: {e}", exc_info=True)
+    for file_name in files:
+        file_path = join(directory_path, file_name)
+        with open(file_path, 'r', encoding='utf-8') as file:
+            conversation_text = file.read().strip()
+            if conversation_text:
+                logging.info(f"Processing conversation from {conversation_text}")
+                response = llm_config.invoke(conversation_text)
+                text_content = response.get('text', '{}')
+                print(text_content)
+                pretty_print_json(process_conversation(text_content))  # Pretty print only the 'text' field
 
 def main():
     args = parse_args()
 
     if args.local_mode:
         logging.info("Running in local mode.")
-        run_local_mode("kafka-producer/conversation_samples")
+        run_local_mode(args.directory_path)
     else:
+        logging.info("Running in Kafka mode.")
         run_kafka_mode()
 
 if __name__ == "__main__":
     main()
+
+# def convert_to_json(output):
+#     """Converts structured text to JSON format."""
+#     structured_text = output.get("text", "")
+#     keys = ["Name", "Email", "Phone Number", "Department", "Issue", "Service", "Additional Information", "Detailed Description"]
+#     data_dict = {}
+#     for line in structured_text.split("\n"):
+#         for key in keys:
+#             if line.strip().startswith(f"- **{key}**"):
+#                 value = line.split(f"- **{key}**:")[1].strip()
+#                 if value.lower() in ["not available", "não disponível"]:
+#                     value = None
+#                 data_dict[key.replace(" ", "_").lower()] = value
+#     return json.dumps(data_dict, indent=4, ensure_ascii=False)
