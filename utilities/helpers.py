@@ -1,6 +1,7 @@
 # helpers.py
 
 from llms.llm_config import llm_config
+import uuid
 import json
 
 # Define the expected fields in a set for easy comparison
@@ -101,15 +102,28 @@ def extract_and_format_json(text_content):
 def process_text_and_extract_data(conversation_text):
     """
     Processes the given conversation text using LLM configuration,
-    extracts 'text' field, and formats it.
+    generates a unique conversation ID, extracts the 'text' field, and formats it.
 
     Parameters:
         conversation_text (str): The conversation text to be processed.
 
     Returns:
-        str: The processed and formatted output as JSON.
+        str: The processed and formatted output as JSON, including a unique conversation ID.
     """
+    # Generate a unique identifier for the conversation
+    conversation_id = str(uuid.uuid4())
+
+    # Invoke the LLM to process the conversation and extract necessary details
     response = llm_config.invoke(conversation_text)
+    
+    # Extract the 'text' content from the response
     llm_text_output = response.get('text', '{}')
+
+    # Format the text output into JSON
     formatted_output = extract_and_format_json(llm_text_output)
-    return formatted_output
+    
+    # Append the conversation ID to the formatted output JSON
+    output_json = json.loads(formatted_output)
+    output_json['conversation_id'] = conversation_id  # Add the generated ID to the JSON output
+
+    return json.dumps(output_json, indent=4)  # Return the updated JSON string with the conversation ID

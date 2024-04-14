@@ -22,8 +22,8 @@ def parse_args():
 def handle_message(message):
     """Process messages received from Kafka."""
     response = llm_config.invoke(message.value['conversation'])
-    pretty_print_json(response)  # For demonstration, print the processed result
-    send_message(producer, config.producer_topic, response)
+    # pretty_print_json(response)  # For demonstration, print the processed result
+    # send_message(producer, config.producer_topic, response)
 
 def run_kafka_mode():
     """Set up and process data using Kafka consumers and producers."""
