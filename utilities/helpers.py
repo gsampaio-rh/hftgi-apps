@@ -121,31 +121,39 @@ def process_text_and_extract_data(conversation_text):
     """
     Processes the given conversation text using LLM configuration,
     generates a unique conversation ID, extracts the 'text' field, and formats it.
+    It also classifies the intent of the conversation and adjusts the score if no intent is found.
 
     Parameters:
         conversation_text (str): The conversation text to be processed.
 
     Returns:
-        str: The processed and formatted output as JSON, including a unique conversation ID.
+        str: The processed and formatted output as JSON, including a unique conversation ID and intent.
     """
     # Generate a unique identifier for the conversation
     conversation_id = str(uuid.uuid4())
 
     # Invoke the LLM to process the conversation and extract necessary details
     response_data = llm_config.invoke(conversation_text)
-    response_intent = llm_config.invoke(conversation_text, "intent_classification")
+    response_intent = llm_config.invoke(conversation_text, template_type='intent_classification')
     
-    # Extract the 'text' content from the response
+    # Extract the 'text' content from the responses
     llm_data_text_output = response_data.get('text', '{}')
     llm_intent_text_output = response_intent.get('text', '{}')
     
-    # Format the text output into JSON
+    # Format the data output into JSON
     formatted_output = extract_and_format_json(llm_data_text_output)
     intent = extract_single_intent(llm_intent_text_output)
     
-    # Append the conversation ID to the formatted output JSON
+    # Append the conversation ID and intent to the formatted output JSON
     output_json = json.loads(formatted_output)
     output_json['conversation_id'] = conversation_id  # Add the generated ID to the JSON output
     output_json['intent'] = intent  # Add the intent to the JSON output
 
-    return json.dumps(output_json, indent=4)  # Return the updated JSON string with the conversation ID
+    # Adjust score if no valid intent is found
+    if intent == "Undefined":
+        if output_json['output_score'] > 2:  # Ensure score does not go negative
+            output_json['output_score'] -= 3
+        else:
+            output_json['output_score'] = 0
+
+    return json.dumps(output_json, indent=4)  # Return the updated JSON string with the conversation ID and intent
