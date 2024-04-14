@@ -5,47 +5,27 @@ from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
 from config.config_manager import config
 
-template = """
-    As an AI expert assistant, your task is to analyze the provided conversation and directly extract and format specific information into a structured JSON object. Do not include any text other than the JSON object.
-
-    Conversation Transcript:
-    {conversation}
-
-    Based on the details in the conversation, construct a JSON object with the following fields:
-    - "Name": "The full name of the individual involved."
-    - "Email": "The email address provided."
-    - "Phone Number": "The contact phone number."
-    - "Location": "Specific location mentioned in relation to the issue."
-    - "Department": "The department or agency mentioned."
-    - "Issue": "Primary issue or concern raised."
-    - "Service": "Specific service being discussed."
-    - "Additional Information": "Any extra relevant details mentioned."
-    - "Detailed Description": "A summary of the situation or problem as described."
-
-    Ensure the output is a clean JSON object:
-    {{
-    "Name": "",
-    "Email": "",
-    "Phone Number": "",
-    "Location": "",
-    "Department": "",
-    "Issue": "",
-    "Service": "",
-    "Additional Information": "",
-    "Detailed Description": ""
-    }}
-"""
-
-class LLMConfig:
-    """ Encapsulates the AI model setup and interaction logic. """
+# - FALCON (spec: https://huggingface.co/tiiuae/falcon-7b/blob/main/tokenizer.json)
+# Falcon special tokens include:
+    # '>>TITLE<<', '>>ABSTRACT<<', '>>INTRODUCTION<<', '>>SUMMARY<<', '>>COMMENT<<',
+    # '>>ANSWER<<', '>>QUESTION<<', '>>DOMAIN<<', '>>PREFIX<<', '>>SUFFIX<<', '>>MIDDLE<<',
+    # along with various punctuation tokens.
     
-    template = """
-    As an AI expert assistant, your task is to analyze the provided conversation and directly extract and format specific information into a structured JSON object. Do not include any text other than the JSON object.
+# Use of >>INTRODUCTION<< to set the stage for the task
+# Use of >>DOMAIN<< to introduce the conversation transcript
+# Use of >>QUESTION<< to specify the details needed for the JSON object
+# Use of >>ANSWER<< to clearly mark where the model’s output should begin
 
+template = """
+    >>INTRODUCTION<<
+    As an AI expert assistant, analyze the provided conversation to directly extract specific information. Format this information into a structured JSON object following the guidelines below. Exclude any text that is not part of the JSON object.
+
+    >>DOMAIN<<
     Conversation Transcript:
     {conversation}
 
-    Based on the details in the conversation, construct a JSON object with the following fields:
+    >>QUESTION<<
+    Construct a JSON object based on the conversation details. Include the following fields:
     - **Name**: The full name(s) of the individual(s) involved.
     - **Email**: The email address(es) cited.
     - **Phone Number**: Any phone number(s) provided.
@@ -56,20 +36,23 @@ class LLMConfig:
     - **Additional Information**: Other pertinent details or stakeholders mentioned.
     - **Detailed Description**: An in-depth summary of the concern or request, including desired outcomes, if any.
 
+    >>ANSWER<<
     Ensure the output is a clean JSON object:
     {{
-    "Name": "",
-    "Email": "",
-    "Phone Number": "",
-    "Location": "",
-    "Department": "",
-    "Issue": "",
-    "Service": "",
-    "Additional Information": "",
-    "Detailed Description": ""
+        "Name": "",
+        "Email": "",
+        "Phone Number": "",
+        "Location": "",
+        "Department": "",
+        "Issue": "",
+        "Service": "",
+        "Additional Information": "",
+        "Detailed Description": ""
     }}
-    
     """
+
+class LLMConfig:
+    """ Encapsulates the AI model setup and interaction logic. """
 
     def __init__(self):
         """ Initialize the AI model with necessary parameters from the config. """

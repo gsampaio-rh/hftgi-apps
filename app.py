@@ -45,7 +45,7 @@ def run_local_mode(directory_path):
                 response = llm_config.invoke(conversation_text)
                 text_content = response.get('text', '{}')
                 print(text_content)
-                pretty_print_json(process_conversation(text_content))  # Pretty print only the 'text' field
+                print(process_conversation(text_content))  # Pretty print only the 'text' field
 
 def main():
     args = parse_args()

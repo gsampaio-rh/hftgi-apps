@@ -2,6 +2,30 @@
 
 import json
 
+# Define the expected fields in a set for easy comparison
+EXPECTED_FIELDS = {
+    "name", "email", "phone_number", "location",
+    "department", "issue", "service",
+    "additional_information", "detailed_description"
+}
+
+def score_output(json_data):
+    """
+    Scores the output based on the number of expected fields present in the JSON data.
+
+    Parameters:
+        json_data (dict): The JSON data parsed into a Python dictionary.
+
+    Returns:
+        int: The score representing the number of expected fields present.
+    """
+    # Extract keys from json_data and convert them to lowercase for case-insensitive comparison
+    received_fields = set(key.lower() for key in json_data.keys())
+
+    # Calculate the score as the count of expected fields that are present
+    score = len(EXPECTED_FIELDS.intersection(received_fields))
+    return score
+
 def pretty_print_json(data):
     """Prints JSON data in a readable format.
     
@@ -46,18 +70,27 @@ def validate_email(email):
 def process_conversation(text_content):
     """ Process the conversation using the LLM and output structured information. """
 
-    # Attempt to extract and parse JSON from the response
-    try:
-        # Assuming the JSON object starts with '{' and ends with '}'
-        json_start = text_content.find('{')
-        json_end = text_content.rfind('}') + 1
-        if json_start != -1 and json_end != -1:
+    # Attempt to parse JSON from the response
+    json_data = None
+    json_start = text_content.find('{')
+    json_end = text_content.rfind('}') + 1
+    if json_start != -1 and json_end != -1:
+        try:
             json_string = text_content[json_start:json_end]
-            json_data = json.loads(json_string)  # Parse the JSON string into a Python dictionary
-            return(json_data)
-        else:
-            print("No JSON data found in the response.")
-    except json.JSONDecodeError as e:
-        print("Failed to decode JSON:", e)
+            json_data = json.loads(json_string)
+        except json.JSONDecodeError:
+            json_data = None
+
+    # Prepare final JSON output
+    output = {}
+    if json_data:
+        output['data'] = json_data
+        output['output_score'] = score_output(json_data)
+    else:
+        output['llm_output'] = text_content  # Include raw output if JSON parsing fails
+        output['output_score'] = 0  # No fields match when no JSON is detected
+
+    return json.dumps(output, indent=4)  # Return formatted JSON string
+
 
 
