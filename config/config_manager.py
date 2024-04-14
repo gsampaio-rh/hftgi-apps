@@ -9,7 +9,7 @@ class Config:
         """ Initialize the configuration settings. """
         self.inference_server_url = os.getenv(
             "INFERENCE_SERVER_URL", 
-            "https://hf-tgi-server-llms.apps.cluster-h95p2.sandbox791.opentlc.com"
+            "https://hf-tgi-server-llms.apps.cluster-45cdc.45cdc.openshift.opentlc.com"
         )
         self.kafka_server = os.getenv("KAFKA_SERVER", "localhost:9092")
         self.consumer_topic = os.getenv("CONSUMER_TOPIC", "chat")

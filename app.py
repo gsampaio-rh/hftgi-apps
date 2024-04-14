@@ -1,10 +1,13 @@
 # app.py
+
+from os import listdir
+from os.path import isfile, join
 import argparse
 import logging
 from config.config_manager import config
 from services.kafka_service import create_kafka_consumer, create_kafka_producer, send_message, receive_messages
 from llms.llm_config import llm_config
-from utilities.helpers import pretty_print_json, process_conversation
+from utilities.helpers import pretty_print_json, process_text_and_extract_data
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -31,22 +34,20 @@ def run_kafka_mode():
 
 def run_local_mode(directory_path):
     """Process all text files in the given directory as conversations."""
-    from os import listdir
-    from os.path import isfile, join
-
-    files = [f for f in listdir(directory_path) if isfile(join(directory_path, f)) and f.endswith('.txt')]
-
-    for file_name in files:
-        file_path = join(directory_path, file_name)
-        with open(file_path, 'r', encoding='utf-8') as file:
-            conversation_text = file.read().strip()
+    
+    files = [join(directory_path, f) for f in listdir(directory_path) if isfile(join(directory_path, f)) and f.endswith('.txt')]
+    
+    for file_path in files:
+        try:
+            with open(file_path, 'r', encoding='utf-8') as file:
+                conversation_text = file.read().strip()
             if conversation_text:
-                logging.info(f"Processing conversation from {conversation_text}")
-                response = llm_config.invoke(conversation_text)
-                llm_text_output = response.get('text', '{}')
-                # logging.info(f"LLM Output {llm_text_output}")
-                llm_processed_json_output=process_conversation(llm_text_output)
-                logging.info(f"LLM Processed Output {llm_processed_json_output}")
+                logging.debug(f"Processing file: {file_path}")
+                llm_processed_output = process_text_and_extract_data(conversation_text)
+                logging.info(f"Processed Output for {file_path}: {llm_processed_output}")
+        except Exception as e:
+            logging.error(f"Failed to process file {file_path}: {e}")
+
 
 def main():
     args = parse_args()

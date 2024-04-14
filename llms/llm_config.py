@@ -11,10 +11,16 @@ from config.config_manager import config
     # '>>ANSWER<<', '>>QUESTION<<', '>>DOMAIN<<', '>>PREFIX<<', '>>SUFFIX<<', '>>MIDDLE<<',
     # along with various punctuation tokens.
     
-# Use of >>INTRODUCTION<< to set the stage for the task
-# Use of >>DOMAIN<< to introduce the conversation transcript
-# Use of >>QUESTION<< to specify the details needed for the JSON object
-# Use of >>ANSWER<< to clearly mark where the model’s output should begin
+# - '>>INTRODUCTION<<': Used to set the stage for the task, providing a contextual beginning to the input.
+# - '>>DOMAIN<<': Introduces the conversation transcript, setting the domain-specific context for the model.
+# - '>>QUESTION<<': Specifies the details required for constructing the JSON object, guiding the model on what information needs to be extracted.
+# - '>>ANSWER<<': Clearly marks where the model’s output should begin, ensuring that the generated text is aligned with the expected response format.
+# - '>>TITLE<<': Often used to indicate the beginning of a title in text generation tasks, guiding the model to format the following text accordingly.
+# - '>>ABSTRACT<<': Used to start an abstract section, typically summarizing content, directing the model to generate a concise overview.
+# - '>>SUMMARY<<': Signals the model to begin a summary, which could be of a longer text passage, aiming to condense information into essential points.
+# - '>>COMMENT<<': Might be used to insert a comment or a remark within or about the text, possibly in a less formal or more conversational style.
+# - '>>PREFIX<<', '>>SUFFIX<<', '>>MIDDLE<<': These tokens could be used to specify parts of the text where certain prefixes, suffixes, or middle sections are expected, possibly for tasks involving text editing or augmentation.
+# - Punctuation tokens: Likely used to ensure proper punctuation in generated text, helping the model maintain grammatical standards.
 
 template = """
     >>INTRODUCTION<<

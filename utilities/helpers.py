@@ -1,5 +1,6 @@
 # helpers.py
 
+from llms.llm_config import llm_config
 import json
 
 # Define the expected fields in a set for easy comparison
@@ -67,10 +68,16 @@ def score_output(json_data):
             score += 1
     return score
 
-def process_conversation(text_content):
-    """ Process the conversation using the LLM and output structured information. """
+def extract_and_format_json(text_content):
+    """
+    Extracts JSON from provided text content and formats it into a structured JSON output.
 
-    # Attempt to parse JSON from the response
+    Parameters:
+        text_content (str): The text content possibly containing JSON data.
+
+    Returns:
+        str: A structured JSON string with extracted data and scores.
+    """
     json_data = None
     json_start = text_content.find('{')
     json_end = text_content.rfind('}') + 1
@@ -81,16 +88,28 @@ def process_conversation(text_content):
         except json.JSONDecodeError:
             json_data = None
 
-    # Prepare final JSON output
     output = {}
     if json_data:
         output['data'] = json_data
-        output['output_score'] = score_output(json_data)
+        output['output_score'] = score_output(json_data)  # Assumes presence of a scoring function
     else:
-        output['llm_output'] = text_content  # Include raw output if JSON parsing fails
-        output['output_score'] = 0  # No fields match when no JSON is detected
+        output['llm_output'] = text_content  # Raw output if JSON parsing fails
+        output['output_score'] = 0  # Indicates no valid JSON data was found
 
-    return json.dumps(output, indent=4)  # Return formatted JSON string
+    return json.dumps(output, indent=4)
 
+def process_text_and_extract_data(conversation_text):
+    """
+    Processes the given conversation text using LLM configuration,
+    extracts 'text' field, and formats it.
 
+    Parameters:
+        conversation_text (str): The conversation text to be processed.
 
+    Returns:
+        str: The processed and formatted output as JSON.
+    """
+    response = llm_config.invoke(conversation_text)
+    llm_text_output = response.get('text', '{}')
+    formatted_output = extract_and_format_json(llm_text_output)
+    return formatted_output
