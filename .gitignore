@@ -173,3 +173,6 @@ SOURCE_DOCUMENTS/.DS_Store
 
 #data
 data/
+
+#content
+content/

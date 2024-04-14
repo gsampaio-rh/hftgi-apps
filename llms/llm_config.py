@@ -1,6 +1,5 @@
 # llm_config.py
-
-from langchain.llms import HuggingFaceTextGenInference
+from langchain_community.llms import HuggingFaceTextGenInference
 from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
 from config.config_manager import config

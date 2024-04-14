@@ -3,3 +3,6 @@ text_generation
 sentence-transformers==2.2.2
 kafka-python
 flask
+unstructured
+unstructured[md]
+faiss-cpu==1.7.4
