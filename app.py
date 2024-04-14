@@ -8,13 +8,16 @@ from config.config_manager import config
 from services.vector_service import VectorDatabaseManager
 from services.kafka_service import create_kafka_consumer, create_kafka_producer, send_message, receive_messages
 from llms.llm_config import llm_config
-from utilities.helpers import pretty_print_json, process_text_and_extract_data
+from services.llm_processing import LLMProcessor
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 # Instantiate the manager
 vector_db_manager = VectorDatabaseManager(content_directory='content', model_name='sentence-transformers/all-mpnet-base-v2')
+
+# Create an instance of the LLMProcessor
+processor = LLMProcessor()
 
 def parse_args():
     """Parse command-line arguments."""
@@ -48,7 +51,7 @@ def run_local_mode(directory_path):
                 conversation_text = file.read().strip()
             if conversation_text:
                 logging.debug(f"Processing file: {file_path}")
-                llm_processed_output = process_text_and_extract_data(conversation_text)
+                llm_processed_output = processor.process_text_and_extract_data(conversation_text)
                 logging.info(f"Processed Output for {file_path}: {llm_processed_output}")
         except Exception as e:
             logging.error(f"Failed to process file {file_path}: {e}")
@@ -59,7 +62,7 @@ def main():
     # Initialize the vector database with content from markdown files
     if args.vector_memory:
         index, file_paths = vector_db_manager.initialize()
-        vector_db_manager.print_retrieved_documents("kafka")
+        # vector_db_manager.print_retrieved_documents("kafka")
     
     if args.local_mode:
         logging.info("Running in local mode.")
