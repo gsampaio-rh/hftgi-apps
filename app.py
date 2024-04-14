@@ -59,17 +59,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-# def convert_to_json(output):
-#     """Converts structured text to JSON format."""
-#     structured_text = output.get("text", "")
-#     keys = ["Name", "Email", "Phone Number", "Department", "Issue", "Service", "Additional Information", "Detailed Description"]
-#     data_dict = {}
-#     for line in structured_text.split("\n"):
-#         for key in keys:
-#             if line.strip().startswith(f"- **{key}**"):
-#                 value = line.split(f"- **{key}**:")[1].strip()
-#                 if value.lower() in ["not available", "não disponível"]:
-#                     value = None
-#                 data_dict[key.replace(" ", "_").lower()] = value
-#     return json.dumps(data_dict, indent=4, ensure_ascii=False)

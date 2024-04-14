@@ -39,15 +39,15 @@ template = """
     >>ANSWER<<
     Ensure the output is a clean JSON object:
     {{
-        "Name": "",
-        "Email": "",
-        "Phone Number": "",
-        "Location": "",
-        "Department": "",
-        "Issue": "",
-        "Service": "",
-        "Additional Information": "",
-        "Detailed Description": ""
+        "name": "",
+        "email": "",
+        "phone_number": "",
+        "location": "",
+        "department": "",
+        "issue": "",
+        "service": "",
+        "additional_information": "",
+        "detailed_description": ""
     }}
     """
 

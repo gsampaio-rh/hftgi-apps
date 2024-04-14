@@ -9,23 +9,6 @@ EXPECTED_FIELDS = {
     "additional_information", "detailed_description"
 }
 
-def score_output(json_data):
-    """
-    Scores the output based on the number of expected fields present in the JSON data.
-
-    Parameters:
-        json_data (dict): The JSON data parsed into a Python dictionary.
-
-    Returns:
-        int: The score representing the number of expected fields present.
-    """
-    # Extract keys from json_data and convert them to lowercase for case-insensitive comparison
-    received_fields = set(key.lower() for key in json_data.keys())
-
-    # Calculate the score as the count of expected fields that are present
-    score = len(EXPECTED_FIELDS.intersection(received_fields))
-    return score
-
 def pretty_print_json(data):
     """Prints JSON data in a readable format.
     
@@ -66,6 +49,23 @@ def validate_email(email):
     import re
     pattern = r'^[\w\.-]+@[\w\.-]+\.\w+$'
     return re.match(pattern, email) is not None
+
+def score_output(json_data):
+    """
+    Scores the output based on the number of expected fields present and non-empty.
+
+    Parameters:
+        json_data (dict): The JSON data parsed into a Python dictionary.
+
+    Returns:
+        int: The score representing the number of expected fields that are present and non-empty.
+    """
+    score = 0
+    for field in EXPECTED_FIELDS:
+        # Check if the field is present in the JSON data and it is not empty
+        if field in json_data and json_data[field].strip():
+            score += 1
+    return score
 
 def process_conversation(text_content):
     """ Process the conversation using the LLM and output structured information. """
