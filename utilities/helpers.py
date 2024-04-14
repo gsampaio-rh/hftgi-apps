@@ -3,6 +3,7 @@
 from llms.llm_config import llm_config
 import uuid
 import json
+import re
 
 # Define the expected fields in a set for easy comparison
 EXPECTED_FIELDS = {
@@ -69,6 +70,23 @@ def score_output(json_data):
             score += 1
     return score
 
+def extract_single_intent(response_text):
+    """
+    Extracts the first valid intent from the model's response text, ensuring it is clean and contains only the category name.
+    """
+    # Define a list of all valid intents
+    valid_intents = [
+        "Accusation", "Booking", "Information Request", 
+        "General Commentary", "Complaint", "Compliment"
+    ]
+
+    # Use regex to find the first occurrence of any valid intent in the response, accounting for potential quotes and extraneous text
+    pattern = r'(?:"|\')?(\b' + '|'.join(valid_intents) + r'\b)(?:"|\')?'
+    match = re.search(pattern, response_text, re.IGNORECASE)
+    if match:
+        return match.group(1)  # Return the matched intent without any quotes
+    return "Undefined"  # Return Undefined if no valid intent is found
+
 def extract_and_format_json(text_content):
     """
     Extracts JSON from provided text content and formats it into a structured JSON output.
@@ -114,16 +132,20 @@ def process_text_and_extract_data(conversation_text):
     conversation_id = str(uuid.uuid4())
 
     # Invoke the LLM to process the conversation and extract necessary details
-    response = llm_config.invoke(conversation_text)
+    response_data = llm_config.invoke(conversation_text)
+    response_intent = llm_config.invoke(conversation_text, "intent_classification")
     
     # Extract the 'text' content from the response
-    llm_text_output = response.get('text', '{}')
-
+    llm_data_text_output = response_data.get('text', '{}')
+    llm_intent_text_output = response_intent.get('text', '{}')
+    
     # Format the text output into JSON
-    formatted_output = extract_and_format_json(llm_text_output)
+    formatted_output = extract_and_format_json(llm_data_text_output)
+    intent = extract_single_intent(llm_intent_text_output)
     
     # Append the conversation ID to the formatted output JSON
     output_json = json.loads(formatted_output)
     output_json['conversation_id'] = conversation_id  # Add the generated ID to the JSON output
+    output_json['intent'] = intent  # Add the intent to the JSON output
 
     return json.dumps(output_json, indent=4)  # Return the updated JSON string with the conversation ID
