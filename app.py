@@ -5,13 +5,16 @@ from os.path import isfile, join
 import argparse
 import logging
 from config.config_manager import config
-from config.vector_db_setup import initialize
+from services.vector_service import VectorDatabaseManager
 from services.kafka_service import create_kafka_consumer, create_kafka_producer, send_message, receive_messages
 from llms.llm_config import llm_config
 from utilities.helpers import pretty_print_json, process_text_and_extract_data
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+
+# Instantiate the manager
+vector_db_manager = VectorDatabaseManager(content_directory='content', model_name='sentence-transformers/all-mpnet-base-v2')
 
 def parse_args():
     """Parse command-line arguments."""
@@ -56,8 +59,9 @@ def main():
     
     # Initialize the vector database with content from markdown files
     if args.vector_memory:
-        index, file_paths = initialize(content_directory='./content')
-
+        index, file_paths = vector_db_manager.initialize()
+        vector_db_manager.print_retrieved_documents("kafka")
+    
     if args.local_mode:
         logging.info("Running in local mode.")
         run_local_mode(args.directory_path)
