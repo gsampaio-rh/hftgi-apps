@@ -43,9 +43,10 @@ def run_local_mode(directory_path):
             if conversation_text:
                 logging.info(f"Processing conversation from {conversation_text}")
                 response = llm_config.invoke(conversation_text)
-                text_content = response.get('text', '{}')
-                print(text_content)
-                print(process_conversation(text_content))  # Pretty print only the 'text' field
+                llm_text_output = response.get('text', '{}')
+                # logging.info(f"LLM Output {llm_text_output}")
+                llm_processed_json_output=process_conversation(llm_text_output)
+                logging.info(f"LLM Processed Output {llm_processed_json_output}")
 
 def main():
     args = parse_args()
