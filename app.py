@@ -53,7 +53,6 @@ def run_local_mode(directory_path):
         except Exception as e:
             logging.error(f"Failed to process file {file_path}: {e}")
 
-
 def main():
     args = parse_args()
     
