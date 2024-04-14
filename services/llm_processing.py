@@ -24,12 +24,16 @@ class LLMProcessor:
         match = re.search(pattern, response_text, re.IGNORECASE)
         return match.group(1) if match else "Undefined"
 
-    def score_output(self, json_data):
+    def score_output(self, json_data, intent):
         score = 0
         for field in self.EXPECTED_FIELDS:
             if field in json_data:
-                print(field)
                 score += 1
+
+        # Adjust score based on the intent
+        if intent == "Undefined":
+            score = max(0, score - 3)
+
         return score
 
     def extract_and_format_json(self, text_content):
@@ -55,11 +59,7 @@ class LLMProcessor:
         intent = self.extract_single_intent(response_intent.get('text', '{}'))
 
         # Calculate the output score after processing data and intents
-        output_score = self.score_output(json_data)
-        
-        # Adjust score based on the intent
-        if intent == "Undefined":
-            output_score = max(0, output_score - 3)
+        output_score = self.score_output(json_data, intent)
 
         formatted_output = {
             "data": json_data,
