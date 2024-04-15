@@ -1,5 +1,8 @@
 const source = new EventSource("/stream");
 
+let currentAudio = null;
+let currentProgressId = '';
+
 // Call this function whenever a new message is received
 function onNewMessageReceived(message) {
     displayChatBallon(message.id, message.sentiment_analysis, message.conversation);
@@ -46,12 +49,29 @@ function formatConversationAsChat(conversationText) {
     return conversationHtml;
 }
 
+function playAudio(audioUrl) {
+    const audio = new Audio(audioUrl);
+    audio.play().catch(e => console.error('Error playing audio:', e));
+}
+
 function displayMessageDetails(message) {
 
     // Construct the HTML for the message details
 
+    audio_file_url = 'https://samplelib.com/lib/preview/mp3/sample-3s.mp3'
+    // audio_file_url = '${ message.audio_file_url }'
+
+    // const speakerIconHtml = `
+    //     <i class="fa fa-volume-up" aria-hidden="true" onclick="toggleAudio('${audio_file_url}', 'progress-${message.id}')">🔊</i>
+    //     <progress id="progress-${message.id}" value="0" max="100" class="audio-progress"></progress>
+    // `;
+
+    const speakerIconHtml = `
+        <i class="fa fa-volume-up" aria-hidden="true" onclick="toggleAudio('${audio_file_url}', 'progress-${message.id}')">🔊</i>
+    `;
+
     const detailsHtml = `
-    <div class="message-detail-item"><div class="detail-title"><h4>${message.id}</h4><i class="fa fa-volume-up" aria-hidden="true">🔈</i></div></div>
+    <div class="message-detail-item"><div class="detail-title"><h4>${message.id}</h4>${speakerIconHtml}</div>
     <div class="message-detail-item"><strong>🧑‍💼 Name:</strong> ${message.name}</div>
     <div class="message-detail-item"><strong>📧 Email:</strong> ${message.email}</div>
     <div class="message-detail-item"><strong>📞 Phone Number:</strong> ${message.phone_number}</div>
@@ -97,3 +117,37 @@ function updateTopDepartments(department) {
 
     $('#departmentList').html(departmentListHtml);
 }
+
+function toggleAudio(audioUrl, progressId) {
+    // If an audio is currently playing, pause it and reset the progress bar
+    if (currentAudio && currentProgressId !== progressId) {
+        currentAudio.pause();
+        currentAudio.currentTime = 0;
+        document.getElementById(currentProgressId).value = 0;
+    }
+
+    // Either create a new audio element or use the existing one
+    if (!currentAudio || currentProgressId !== progressId) {
+        currentAudio = new Audio(audioUrl);
+        currentProgressId = progressId;
+    }
+
+    // Play or pause the audio
+    if (currentAudio.paused) {
+        currentAudio.play();
+        currentAudio.addEventListener('timeupdate', updateProgress);
+    } else {
+        currentAudio.pause();
+    }
+
+    function updateProgress() {
+        const progress = document.getElementById(progressId);
+        const value = (currentAudio.currentTime / currentAudio.duration) * 100;
+        progress.value = value;
+    }
+}
+
+// Add listener for when the audio ends to reset the progress bar
+currentAudio.addEventListener('ended', function () {
+    document.getElementById(currentProgressId).value = 0;
+});

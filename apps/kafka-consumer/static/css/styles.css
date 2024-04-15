@@ -342,3 +342,10 @@ html {
 .sender::before {
     display: none;
 }
+
+.audio-progress {
+    width: 100%;
+    /* Full width */
+    visibility: hidden;
+    /* Hidden by default */
+}
