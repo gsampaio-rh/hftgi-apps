@@ -9,12 +9,16 @@ from services.vector_service import VectorDatabaseManager
 from services.kafka_service import create_kafka_consumer, create_kafka_producer, send_message, receive_messages
 from llms.llm_config import llm_config
 from services.llm_processing import LLMProcessor
+from services.document_management import DocumentManager
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 # Instantiate the manager
 vector_db_manager = VectorDatabaseManager(content_directory='content', model_name='sentence-transformers/all-mpnet-base-v2')
+
+# Create a DocumentManager instance using the existing vector_db_manager
+doc_manager = DocumentManager(vector_db_manager)
 
 # Create an instance of the LLMProcessor
 processor = LLMProcessor()
@@ -53,16 +57,23 @@ def run_local_mode(directory_path):
                 logging.debug(f"Processing file: {file_path}")
                 llm_processed_output = processor.process_text_and_extract_data(conversation_text)
                 logging.info(f"Processed Output for {file_path}: {llm_processed_output}")
+
+                # result = json.loads(llm_processed_output)
+                # if result.get("intent") == "Information Request":
+                #     issue = result.get("data", {}).get("issue")
+                #     documents = doc_manager.retrieve_documents(issue)
+                #     llm_processed_output["related_documents"] = documents
+
         except Exception as e:
             logging.error(f"Failed to process file {file_path}: {e}")
 
 def main():
     args = parse_args()
-    
+
     # Initialize the vector database with content from markdown files
     if args.vector_memory:
         index, file_paths = vector_db_manager.initialize()
-        # vector_db_manager.print_retrieved_documents("kafka")
+        # doc_manager.retrieve_documents("kafka")
     
     if args.local_mode:
         logging.info("Running in local mode.")

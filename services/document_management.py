@@ -23,7 +23,7 @@ class DocumentManager:
             list: A list of documents that are relevant to the query.
         """
         print(f"Querying the vector database for information on: {query}")
-        documents = self.vector_db_manager.print_retrieved_documents(query)
+        documents = self.vector_db_manager.retrieve_documents(query)
         return documents
 
     def index_new_document(self, document_path):
