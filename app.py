@@ -1,15 +1,17 @@
 # app.py
 
-from os import listdir
-from os.path import isfile, join
 import argparse
 import logging
+import json
+from os import listdir
+from os.path import isfile, join
 from config.config_manager import config
 from services.vector_service import VectorDatabaseManager
 from services.kafka_service import create_kafka_consumer, create_kafka_producer, send_message, receive_messages
 from llms.llm_config import llm_config
 from services.llm_processing import LLMProcessor
 from services.document_management import DocumentManager
+from utilities.helpers import top_words, pretty_print_json
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -54,15 +56,33 @@ def run_local_mode(directory_path):
             with open(file_path, 'r', encoding='utf-8') as file:
                 conversation_text = file.read().strip()
             if conversation_text:
-                logging.debug(f"Processing file: {file_path}")
+                logging.info(f"Processing file: {file_path}")
                 llm_processed_output = processor.process_text_and_extract_data(conversation_text)
-                logging.info(f"Processed Output for {file_path}: {llm_processed_output}")
 
-                # result = json.loads(llm_processed_output)
-                # if result.get("intent") == "Information Request":
-                #     issue = result.get("data", {}).get("issue")
-                #     documents = doc_manager.retrieve_documents(issue)
-                #     llm_processed_output["related_documents"] = documents
+                result = json.loads(llm_processed_output)
+                if result.get("intent") == "Information Request":
+                    logging.info("Information Request found")
+                    top = top_words(llm_processed_output)
+                    logging.info(f"Top words Output for {top}")
+
+                    # Retrieve documents based on the first keyword (most frequent)
+                    if top:  # Ensure there is at least one keyword
+                        documents = doc_manager.retrieve_documents(top[0][0])
+
+                        # Check if documents DataFrame is not empty
+                        if not documents.empty:
+                            logging.info(f"Documents retrieved: {documents}")
+                            # Convert DataFrame to JSON
+                            documents_json = documents.to_json(orient='records')
+
+                            # Save JSON string in the result dictionary
+                            result["related_documents"] = json.loads(documents_json)
+                        else:
+                            logging.info("No relevant documents were found for the top keyword.")
+                    else:
+                        logging.info("No keywords were extracted, thus no documents can be retrieved.")
+
+                logging.info(f"Processed Output for {file_path}: {pretty_print_json(result)}")
 
         except Exception as e:
             logging.error(f"Failed to process file {file_path}: {e}")
