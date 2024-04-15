@@ -142,6 +142,34 @@ html {
     /* Space below the ID */
 }
 
+.detail-title {
+    display: flex;
+    /* Use flexbox for layout */
+    align-items: center;
+    /* Center align the items vertically */
+    justify-content: space-between;
+    /* Space between the ID and icon */
+    margin-bottom: 10px;
+    /* Space below the title */
+}
+
+.detail-title h4 {
+    margin: 0;
+    /* Remove default margin from h4 */
+    font-size: 1.2em;
+    /* Adjust font size as needed */
+    color: #333;
+    /* Dark grey color for the ID */
+}
+
+.fa-volume-up {
+    font-size: 1.5em;
+    /* Adjust icon size as needed */
+    cursor: pointer;
+    /* Indicates the icon is clickable */
+    /* Add padding if needed for clickability */
+}
+
 /* Animation for positive flash */
 @keyframes flashGreen {
     from {

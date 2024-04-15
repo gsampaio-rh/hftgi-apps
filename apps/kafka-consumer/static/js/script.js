@@ -51,7 +51,7 @@ function displayMessageDetails(message) {
     // Construct the HTML for the message details
 
     const detailsHtml = `
-    <div class="message-detail-item"><h4>${message.id}</h4></div>
+    <div class="message-detail-item"><div class="detail-title"><h4>${message.id}</h4><i class="fa fa-volume-up" aria-hidden="true">🔈</i></div></div>
     <div class="message-detail-item"><strong>🧑‍💼 Name:</strong> ${message.name}</div>
     <div class="message-detail-item"><strong>📧 Email:</strong> ${message.email}</div>
     <div class="message-detail-item"><strong>📞 Phone Number:</strong> ${message.phone_number}</div>
