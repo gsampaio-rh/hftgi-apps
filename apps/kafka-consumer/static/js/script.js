@@ -1,5 +1,8 @@
 const source = new EventSource("/stream");
 
+// Object to hold department counts
+const departmentCounts = {};
+
 let currentAudio = null;
 let currentProgressId = '';
 
@@ -58,20 +61,20 @@ function displayMessageDetails(message) {
 
     // Construct the HTML for the message details
 
-    audio_file_url = 'https://samplelib.com/lib/preview/mp3/sample-3s.mp3'
+    // audio_file_url = 'https://samplelib.com/lib/preview/mp3/sample-3s.mp3'
     // audio_file_url = '${ message.audio_file_url }'
 
-    // const speakerIconHtml = `
-    //     <i class="fa fa-volume-up" aria-hidden="true" onclick="toggleAudio('${audio_file_url}', 'progress-${message.id}')">🔊</i>
-    //     <progress id="progress-${message.id}" value="0" max="100" class="audio-progress"></progress>
-    // `;
-
-    const speakerIconHtml = `
-        <i class="fa fa-volume-up" aria-hidden="true" onclick="toggleAudio('${audio_file_url}', 'progress-${message.id}')">🔊</i>
-    `;
+    // Assuming 'message.text_to_synthesize' contains the text you want to convert to speech
+    const textToSynthesize = "Traffic Department";
 
     const detailsHtml = `
-    <div class="message-detail-item"><div class="detail-title"><h4>${message.id}</h4>${speakerIconHtml}</div>
+    <div class="message-detail-item">
+        <div class="detail-title">
+            <h4>${message.id}</h4>
+            <i class="fa fa-volume-up" aria-hidden="true" onclick="toggleAudio('${textToSynthesize}', 'progress-${message.id}')">🔊</i>
+        </div>
+        <progress id="progress-${message.id}" value="0" max="100" class="audio-progress"></progress>
+    </div>
     <div class="message-detail-item"><strong>🧑‍💼 Name:</strong> ${message.name}</div>
     <div class="message-detail-item"><strong>📧 Email:</strong> ${message.email}</div>
     <div class="message-detail-item"><strong>📞 Phone Number:</strong> ${message.phone_number}</div>
@@ -96,9 +99,6 @@ function displayMessageDetails(message) {
     $('#jsonCodeBlock').html(`<pre><code>${jsonPretty}</code></pre>`);
 }
 
-// Object to hold department counts
-const departmentCounts = {};
-
 function updateTopDepartments(department) {
     // Increase the count for the department or add it if it doesn't exist
     if (departmentCounts[department]) {
@@ -118,36 +118,65 @@ function updateTopDepartments(department) {
     $('#departmentList').html(departmentListHtml);
 }
 
-function toggleAudio(audioUrl, progressId) {
-    // If an audio is currently playing, pause it and reset the progress bar
+async function toggleAudio(textToSynthesize, progressId) {
     if (currentAudio && currentProgressId !== progressId) {
         currentAudio.pause();
         currentAudio.currentTime = 0;
-        document.getElementById(currentProgressId).value = 0;
+        document.getElementById(progressId).value = 0;
+        currentAudio = null;  // Clear the existing audio object
     }
 
-    // Either create a new audio element or use the existing one
-    if (!currentAudio || currentProgressId !== progressId) {
-        currentAudio = new Audio(audioUrl);
+    // Only create a new Audio object if there isn't one already playing for the same message
+    if (!currentAudio) {
+        currentAudio = new Audio();
         currentProgressId = progressId;
-    }
 
-    // Play or pause the audio
-    if (currentAudio.paused) {
-        currentAudio.play();
-        currentAudio.addEventListener('timeupdate', updateProgress);
+        api_audio = "https://tts-api-tts.apps.cluster-45cdc.45cdc.openshift.opentlc.com/synthesize"
+
+        try {
+            const response = await fetch(api_audio, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'audio/wav'
+                },
+                body: JSON.stringify({ text: textToSynthesize })
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const audioBlob = await response.blob();
+            const audioUrl = URL.createObjectURL(audioBlob);
+            currentAudio.src = audioUrl;
+
+            // Play the audio
+            currentAudio.play();
+            document.getElementById(progressId).style.visibility = 'visible';
+
+            // Move the event listener addition here, inside the condition where currentAudio is guaranteed to be non-null
+            currentAudio.addEventListener('timeupdate', () => {
+                const progress = document.getElementById(progressId);
+                const value = (currentAudio.currentTime / currentAudio.duration) * 100;
+                progress.value = value;
+            });
+
+            currentAudio.addEventListener('ended', () => {
+                const progress = document.getElementById(progressId);
+                progress.value = 0;
+                progress.style.visibility = 'hidden';
+                currentAudio = null;  // Clear the audio object when playback ends
+            });
+        } catch (error) {
+            console.error('Error fetching synthesized audio:', error);
+        }
     } else {
-        currentAudio.pause();
-    }
-
-    function updateProgress() {
-        const progress = document.getElementById(progressId);
-        const value = (currentAudio.currentTime / currentAudio.duration) * 100;
-        progress.value = value;
+        // If currentAudio exists, just toggle play/pause
+        if (currentAudio.paused) {
+            currentAudio.play();
+        } else {
+            currentAudio.pause();
+        }
     }
 }
-
-// Add listener for when the audio ends to reset the progress bar
-currentAudio.addEventListener('ended', function () {
-    document.getElementById(currentProgressId).value = 0;
-});

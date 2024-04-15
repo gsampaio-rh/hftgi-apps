@@ -144,22 +144,17 @@ html {
 
 .detail-title {
     display: flex;
-    /* Use flexbox for layout */
-    align-items: center;
-    /* Center align the items vertically */
     justify-content: space-between;
-    /* Space between the ID and icon */
-    margin-bottom: 10px;
-    /* Space below the title */
+    /* Spreads the child elements apart */
+    align-items: center;
+    width: 100%;
+    /* Ensures the container fills the width */
 }
 
 .detail-title h4 {
     margin: 0;
-    /* Remove default margin from h4 */
-    font-size: 1.2em;
-    /* Adjust font size as needed */
-    color: #333;
-    /* Dark grey color for the ID */
+    /* Removes margin from h4 if there's any */
+    /* Add more styling for h4 here */
 }
 
 .fa-volume-up {
@@ -343,9 +338,29 @@ html {
     display: none;
 }
 
+/* Adjust the styles for the progress bar */
 .audio-progress {
     width: 100%;
     /* Full width */
     visibility: hidden;
     /* Hidden by default */
+    height: 5px;
+    /* Adjust height as needed */
+    border-radius: 5px;
+    /* Rounded corners */
+    background-color: #d3d3d3;
+    /* Light grey background */
+}
+
+.audio-progress::-webkit-progress-bar {
+    background-color: #f3f3f3;
+}
+
+.audio-progress::-webkit-progress-value {
+    background-color: #4CAF50;
+    /* Use your theme's color */
+}
+
+.audio-progress::-moz-progress-bar {
+    background-color: #4CAF50;
 }
