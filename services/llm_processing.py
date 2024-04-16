@@ -68,7 +68,6 @@ class LLMProcessor:
         
         return 0
 
-
     def process_text_and_extract_data(self, conversation_text):
         conversation_id = str(uuid.uuid4())
         response_data = llm_config.invoke(conversation_text)
