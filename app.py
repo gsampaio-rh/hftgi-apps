@@ -12,7 +12,7 @@ from services.kafka_service import create_kafka_consumer, create_kafka_producer,
 from llms.llm_config import llm_config
 from services.llm_processing import LLMProcessor
 from services.document_management import DocumentManager
-from utilities.helpers import top_words, pretty_print_json
+from utilities.helpers import top_words, pretty_print_json, transcribe_audio
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -31,6 +31,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Run the AI model in local or Kafka mode.")
     parser.add_argument("--local-mode", action="store_true", help="Run the application in local mode without Kafka.")
     parser.add_argument("--vector-memory", action="store_true", help="Run the application with a FAISS vector store")
+    parser.add_argument("--audio-enabled", action="store_true", help="Run the application with suppor to audio files")
     parser.add_argument("--directory-path", type=str, default="data/conversations", help="Directory path for local mode data processing.")
     return parser.parse_args()
 
@@ -70,18 +71,32 @@ def process_conversation(conversation_text, use_vector_memory=False):
                 logging.info("No keywords were extracted, thus no documents can be retrieved.")
         return result
 
-def run_kafka_mode(directory_path, use_vector_memory=False):
+def run_kafka_mode(directory_path, use_vector_memory=False, audio_enabled=False):
     """Set up and process data using Kafka consumers and producers."""
     # Initialize Kafka Producer
     producer = create_kafka_producer()
 
     files = [join(directory_path, f) for f in listdir(directory_path) if isfile(join(directory_path, f)) and f.endswith('.txt')]
 
+    if audio_enabled:
+        audio = [join(directory_path, f) for f in listdir(directory_path) if isfile(join(directory_path, f)) and f.endswith('.wav')]
+
+        for file_path in audio:
+            logging.info(f"Processing audio file: {file_path}")
+            processed_audio = transcribe_audio(tts_server=config.tts_server, file_path=file_path)
+
+            audio_transcription = json.loads(processed_audio).get("transcription")
+            logging.info(f"Transcription: {audio_transcription}")
+
+            audio_result = processor.process_audio_and_extract_data(audio_transcription)
+            # audio_json=llm_config.invoke(audio_transcription, template_type='audio_extraction')
+            print(audio_result)
+
     for file_path in files:
         try:
             with open(file_path, 'r', encoding='utf-8') as file:
                 conversation_text = file.read().strip()
-                logging.info(f"Processing file: {file_path}")
+                logging.info(f"Processing text file: {file_path}")
 
                 # Process each conversation text
                 result = process_conversation(conversation_text, use_vector_memory)
@@ -123,7 +138,7 @@ def main():
         run_local_mode(args.directory_path, args.vector_memory)
     else:
         logging.info("Running in Kafka mode.")
-        run_kafka_mode(args.directory_path, args.vector_memory)
+        run_kafka_mode(args.directory_path, args.vector_memory, args.audio_enabled)
 
 if __name__ == "__main__":
     main()

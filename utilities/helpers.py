@@ -7,6 +7,7 @@ import nltk
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 from nltk.probability import FreqDist
+import requests
 
 def pretty_print_json(data):
     """Prints JSON data in a readable format.
@@ -73,3 +74,34 @@ def top_words(data_json, podium=3):
     keywords = freq_dist.most_common(3)
 
     return keywords
+
+def transcribe_audio(tts_server, file_path):
+    """
+    Sends a POST request to a local server to transcribe a WAV file.
+
+    Args:
+        file_path (str): The path to the .wav audio file to be transcribed.
+
+    Returns:
+        str: The transcribed text from the audio file.
+    """
+
+    url = (f"{tts_server}/transcribe")
+    files = {'audio': (file_path, open(file_path, 'rb'), 'audio/wav')}
+
+    try:
+        response = requests.post(url, files=files)
+        response.raise_for_status()  # Raises an HTTPError for bad responses (4XX, 5XX)
+
+        # Assuming the response body contains the transcript directly
+        return response.text
+    except requests.exceptions.HTTPError as errh:
+        print(f"HTTP Error: {errh}")
+    except requests.exceptions.ConnectionError as errc:
+        print(f"Error Connecting: {errc}")
+    except requests.exceptions.Timeout as errt:
+        print(f"Timeout Error: {errt}")
+    except requests.exceptions.RequestException as err:
+        print(f"OOps: Something Else: {err}")
+    finally:
+        files['audio'][1].close()  # Ensure the file is closed after the request

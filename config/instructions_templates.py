@@ -104,3 +104,28 @@ summary_extraction_template = """
     The tweet-like summary of the conversation is:
     [A concise, direct encapsulation, not exceeding 280 characters.]
     """
+
+audio_extraction_template = """
+    >>INTRODUCTION<<
+    As an AI expert assistant, your task is to analyze the transcribed content of the provided audio file to directly extract specific information. Format this information into a structured JSON object following the guidelines below. Ensure that the output contains only the JSON object and excludes any additional text or formatting.
+
+    >>DOMAIN<<
+    Audio File Transcription:
+    {transcription}
+
+    >>QUESTION<<
+    Based on the details from the audio file transcription, construct a JSON object with the following fields. Ensure all information is accurately represented directly in the JSON format without adding any surrounding text:
+
+    >>ANSWER<<
+    {{
+        "name": "",
+        "email": "",
+        "phone_number": "",
+        "location": "",
+        "department": "",
+        "issue": "",
+        "service": "",
+        "additional_information": "",
+        "detailed_description": ""
+    }}
+    """

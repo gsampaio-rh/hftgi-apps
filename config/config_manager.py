@@ -15,6 +15,7 @@ class Config:
         self.consumer_topic = os.getenv("CONSUMER_TOPIC", "chat")
         self.producer_topic = os.getenv("PRODUCER_TOPIC", "answer")
         self.csv_file_path = os.getenv("CSV_FILE_PATH", "conversation_results.csv")
+        self.tts_server = os.getenv("TTS_SERVER","http://localhost:8000")
 
     def __str__(self):
         """ String representation for easy debugging. """

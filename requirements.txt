@@ -8,3 +8,4 @@ unstructured[md]
 faiss-cpu==1.7.4
 pandas
 nltk
+requests

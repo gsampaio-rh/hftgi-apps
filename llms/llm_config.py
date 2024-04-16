@@ -3,7 +3,7 @@ from langchain_community.llms import HuggingFaceTextGenInference
 from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
 from config.config_manager import config
-from config.instructions_templates import extraction_template, intent_classification_template, summary_extraction_template, sentiment_extraction_template
+from config.instructions_templates import audio_extraction_template, extraction_template, intent_classification_template, summary_extraction_template, sentiment_extraction_template
 
 class LLMConfig:
     """ Encapsulates the AI model setup and interaction logic. """
@@ -24,6 +24,7 @@ class LLMConfig:
         self.intent_classification_chain = LLMChain(prompt=PromptTemplate.from_template(intent_classification_template), llm=self.llm)
         self.summary_classification_chain = LLMChain(prompt=PromptTemplate.from_template(summary_extraction_template), llm=self.llm)
         self.sentiment_classification_chain = LLMChain(prompt=PromptTemplate.from_template(sentiment_extraction_template), llm=self.llm)
+        self.audio_extraction_chain = LLMChain(prompt=PromptTemplate.from_template(audio_extraction_template), llm=self.llm)
 
     def invoke(self, conversation, template_type='extraction'):
         """ Invoke the LLMChain with a given conversation to process text based on the specified template type. """
@@ -35,6 +36,8 @@ class LLMConfig:
             return self.summary_classification_chain.invoke({"conversation": conversation})
         elif template_type == 'sentiment_classification':
             return self.sentiment_classification_chain.invoke({"conversation": conversation})
+        elif template_type == 'audio_extraction':
+            return self.audio_extraction_chain.invoke({"transcription": conversation})
         else:
             raise ValueError("Invalid template type specified")
 
