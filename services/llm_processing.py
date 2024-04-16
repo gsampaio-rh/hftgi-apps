@@ -82,6 +82,7 @@ class LLMProcessor:
 
         formatted_output = {
             "conversation_id": conversation_id,
+            "conversation_text": conversation_text,
             "data": json_data,
             "intent": intent,
             "sentiment": sentiment,

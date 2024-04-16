@@ -67,12 +67,29 @@ def process_conversation(conversation_text, use_vector_memory=False):
                 logging.info("No keywords were extracted, thus no documents can be retrieved.")
         return result
 
-def run_kafka_mode():
+def run_kafka_mode(directory_path, use_vector_memory=False):
     """Set up and process data using Kafka consumers and producers."""
-    consumer = create_kafka_consumer(config.consumer_topic, "chat-group")
+    # Initialize Kafka Producer
     producer = create_kafka_producer()
 
-    receive_messages(consumer, handle_message)
+    files = [join(directory_path, f) for f in listdir(directory_path) if isfile(join(directory_path, f)) and f.endswith('.txt')]
+
+    for file_path in files:
+        try:
+            with open(file_path, 'r', encoding='utf-8') as file:
+                conversation_text = file.read().strip()
+                logging.info(f"Processing file: {file_path}")
+
+                # Process each conversation text
+                result = process_conversation(conversation_text, use_vector_memory)
+
+                # Send processed result to Kafka
+                send_message(producer, config.producer_topic, result)
+
+                logging.info(f"Processed Output for {file_path}: {pretty_print_json(result)}")
+
+        except Exception as e:
+            logging.error(f"Failed to process file {file_path}: {e}")
 
 def run_local_mode(directory_path, use_vector_memory=False):
     """Process all text files in the given directory as conversations."""
@@ -103,7 +120,7 @@ def main():
         run_local_mode(args.directory_path, args.vector_memory)
     else:
         logging.info("Running in Kafka mode.")
-        run_kafka_mode()
+        run_kafka_mode(args.directory_path, args.vector_memory)
 
 if __name__ == "__main__":
     main()
