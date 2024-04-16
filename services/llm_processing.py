@@ -64,48 +64,10 @@ class LLMProcessor:
         return output
 
     def extract_json_from_audio_data(self, data):
-        transcription = data['transcription']
-        instructions = data['text']
+        #TODO: Implement this method
+        
+        return 0
 
-        # Mapping guideline keywords to phrases used in the transcription
-        mappings = {
-            "Name": "the full name(s) of the individual(s) involved",
-            "Email": "the email address(es) cited",
-            "Phone Number": "any phone number(s) provided",
-            "Location": "details of any specific locations related to the issue or service",
-            "Department": "the department or entity involved",
-            "Issue": "a succinct description of the primary issue(s) discussed",
-            "Service": "the specific service(s) referenced in relation to the issue",
-            "Additional Information": "other pertinent details or stakeholders mentioned",
-            "Detailed Description": "an in-depth summary of the concern or request, including desired outcomes"
-        }
-
-        # Initializing JSON object with empty fields
-        extracted_info = {
-            "name": "",
-            "email": "",
-            "phone_number": "",
-            "location": "",
-            "department": "",
-            "issue": "",
-            "service": "",
-            "additional_information": "",
-            "detailed_description": ""
-        }
-
-        # Extract and assign information based on the provided transcription
-        for key, hint in mappings.items():
-            # A simple placeholder to extract text after a specific keyword or phrase
-            # This can be replaced with more complex regex patterns or NLP techniques for better accuracy
-            start = transcription.find(hint)
-            if start != -1:
-                # Extract hypothetical substrings that follow the hint phrases.
-                # This is highly simplified and may need real regex/NLP for accurate results
-                end = transcription.find('.', start)
-                if end != -1:
-                    extracted_info[key.lower().replace(" ", "_")] = transcription[start + len(hint) + 1:end].strip()
-
-        return json.dumps(extracted_info, indent=4)
 
     def process_text_and_extract_data(self, conversation_text):
         conversation_id = str(uuid.uuid4())
