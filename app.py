@@ -39,6 +39,34 @@ def handle_message(message):
     # pretty_print_json(response)  # For demonstration, print the processed result
     # send_message(producer, config.producer_topic, response)
 
+def process_conversation(conversation_text, use_vector_memory=False):
+    if conversation_text:
+        llm_processed_output = processor.process_text_and_extract_data(conversation_text)
+
+        result = json.loads(llm_processed_output)
+        if result.get("intent") == "Information Request":
+            logging.info("Information Request found")
+            top = top_words(llm_processed_output)
+            logging.info(f"Top words Output for {top}")
+
+            # Retrieve documents based on the first keyword (most frequent)
+            if top and use_vector_memory :  # Ensure there is at least one keyword
+                documents = doc_manager.retrieve_documents(top[0][0])
+
+                # Check if documents DataFrame is not empty
+                if not documents.empty:
+                    logging.info(f"Documents retrieved: {documents}")
+                    # Convert DataFrame to JSON
+                    documents_json = documents.to_json(orient='records')
+
+                    # Save JSON string in the result dictionary
+                    result["related_documents"] = json.loads(documents_json)
+                else:
+                    logging.info("No relevant documents were found for the top keyword.")
+            else:
+                logging.info("No keywords were extracted, thus no documents can be retrieved.")
+        return result
+
 def run_kafka_mode():
     """Set up and process data using Kafka consumers and producers."""
     consumer = create_kafka_consumer(config.consumer_topic, "chat-group")
@@ -55,33 +83,8 @@ def run_local_mode(directory_path, use_vector_memory=False):
         try:
             with open(file_path, 'r', encoding='utf-8') as file:
                 conversation_text = file.read().strip()
-            if conversation_text:
                 logging.info(f"Processing file: {file_path}")
-                llm_processed_output = processor.process_text_and_extract_data(conversation_text)
-
-                result = json.loads(llm_processed_output)
-                if result.get("intent") == "Information Request":
-                    logging.info("Information Request found")
-                    top = top_words(llm_processed_output)
-                    logging.info(f"Top words Output for {top}")
-
-                    # Retrieve documents based on the first keyword (most frequent)
-                    if top and use_vector_memory :  # Ensure there is at least one keyword
-                        documents = doc_manager.retrieve_documents(top[0][0])
-
-                        # Check if documents DataFrame is not empty
-                        if not documents.empty:
-                            logging.info(f"Documents retrieved: {documents}")
-                            # Convert DataFrame to JSON
-                            documents_json = documents.to_json(orient='records')
-
-                            # Save JSON string in the result dictionary
-                            result["related_documents"] = json.loads(documents_json)
-                        else:
-                            logging.info("No relevant documents were found for the top keyword.")
-                    else:
-                        logging.info("No keywords were extracted, thus no documents can be retrieved.")
-
+                result = process_conversation(conversation_text, use_vector_memory)
                 logging.info(f"Processed Output for {file_path}: {pretty_print_json(result)}")
 
         except Exception as e:
