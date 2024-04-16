@@ -46,7 +46,7 @@ def run_kafka_mode():
 
     receive_messages(consumer, handle_message)
 
-def run_local_mode(directory_path):
+def run_local_mode(directory_path, use_vector_memory=False):
     """Process all text files in the given directory as conversations."""
     
     files = [join(directory_path, f) for f in listdir(directory_path) if isfile(join(directory_path, f)) and f.endswith('.txt')]
@@ -66,7 +66,7 @@ def run_local_mode(directory_path):
                     logging.info(f"Top words Output for {top}")
 
                     # Retrieve documents based on the first keyword (most frequent)
-                    if top:  # Ensure there is at least one keyword
+                    if top and use_vector_memory :  # Ensure there is at least one keyword
                         documents = doc_manager.retrieve_documents(top[0][0])
 
                         # Check if documents DataFrame is not empty
@@ -97,7 +97,7 @@ def main():
     
     if args.local_mode:
         logging.info("Running in local mode.")
-        run_local_mode(args.directory_path)
+        run_local_mode(args.directory_path, args.vector_memory)
     else:
         logging.info("Running in Kafka mode.")
         run_kafka_mode()

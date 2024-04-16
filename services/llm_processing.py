@@ -24,6 +24,19 @@ class LLMProcessor:
         match = re.search(pattern, response_text, re.IGNORECASE)
         return match.group(1) if match else "Undefined"
 
+    @staticmethod
+    def extract_sentiment(text):
+        """Extracts the sentiment from a sentence by searching for specific keywords."""
+        patterns = {
+            'positive': re.compile(r'\b(positive|professional|polite|encouraging|good)\b', re.IGNORECASE),
+            'negative': re.compile(r'\b(negative|problematic|difficult|bad)\b', re.IGNORECASE),
+            'neutral': re.compile(r'\b(neutral|objective|impartial|fair)\b', re.IGNORECASE)
+        }
+        for sentiment, pattern in patterns.items():
+            if pattern.search(text):
+                return sentiment
+        return 'undefined'
+
     def score_output(self, json_data, intent):
         score = 0
         for field in self.EXPECTED_FIELDS:
@@ -54,17 +67,25 @@ class LLMProcessor:
         conversation_id = str(uuid.uuid4())
         response_data = llm_config.invoke(conversation_text)
         response_intent = llm_config.invoke(conversation_text, template_type='intent_classification')
-    
+
         json_data = self.extract_and_format_json(response_data.get('text', '{}'))
         intent = self.extract_single_intent(response_intent.get('text', '{}'))
+
+        response_summary = llm_config.invoke(conversation_text, template_type='summary_classification')
+        response_sentiment = llm_config.invoke(conversation_text, template_type='sentiment_classification')
+
+        summary = response_summary.get('text', '{}')
+        sentiment = self.extract_sentiment(response_sentiment.get('text', '{}'))
 
         # Calculate the output score after processing data and intents
         output_score = self.score_output(json_data, intent)
 
         formatted_output = {
-            "data": json_data,
             "conversation_id": conversation_id,
+            "data": json_data,
             "intent": intent,
+            "sentiment": sentiment,
+            "summary": summary,
             "output_score": output_score
         }
 

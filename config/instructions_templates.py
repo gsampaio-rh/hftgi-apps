@@ -72,3 +72,35 @@ intent_classification_template = """
     >>ANSWER<<
     [Your single-category answer here without additional comments or explanations.]
     """
+
+sentiment_extraction_template = """
+    >>INTRODUCTION<<
+    As an AI expert assistant, carefully analyze the sentiment of the provided conversation. Your task is to determine if the overall tone is positive, negative, or neutral.
+
+    >>DOMAIN<<
+    Conversation Transcript:
+    {conversation}
+
+    >>QUESTION<<
+    What is the overall sentiment of the conversation? Provide your analysis based on the tone and content of the discussion.
+
+    >>ANSWER<<
+    The sentiment of the conversation is:
+    [Positive, Negative, Neutral]
+    """
+
+summary_extraction_template = """
+    >>INTRODUCTION<<
+    As an AI, your task is to condense the provided conversation into a summary that could fit within a tweet. This summary should capture the key elements of the dialogue succinctly, like a highlight or a headline.
+
+    >>DOMAIN<<
+    Conversation Transcript:
+    {conversation}
+
+    >>QUESTION<<
+    Produce a summary that encapsulates the core of the conversation in no more than 280 characters. This summary should be direct and to the point, effectively conveying the main issues or points discussed as if it were a tweet.
+
+    >>ANSWER<<
+    The tweet-like summary of the conversation is:
+    [A concise, direct encapsulation, not exceeding 280 characters.]
+    """
