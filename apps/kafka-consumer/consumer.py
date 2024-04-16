@@ -73,6 +73,12 @@ def chat_json_response(message_dict):
         "output_score": message_dict.get("output_score")
     }
 
+    # Check for and include any additional fields dynamically
+    additional_fields = ["related_documents"]
+    for field in additional_fields:
+        if field in message_dict:
+            json_response[field] = message_dict[field]
+
     return json_response
 
 @app.route("/stream")

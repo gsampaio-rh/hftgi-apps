@@ -3,6 +3,7 @@
 import argparse
 import logging
 import json
+from unidecode import unidecode
 from os import listdir
 from os.path import isfile, join
 from config.config_manager import config
@@ -51,7 +52,9 @@ def process_conversation(conversation_text, use_vector_memory=False):
 
             # Retrieve documents based on the first keyword (most frequent)
             if top and use_vector_memory :  # Ensure there is at least one keyword
-                documents = doc_manager.retrieve_documents(top[0][0])
+                # Remover acentos do primeiro item mais frequente
+                keyword = unidecode(top[0][0]) if top and top[0] else None
+                documents = doc_manager.retrieve_documents(keyword)
 
                 # Check if documents DataFrame is not empty
                 if not documents.empty:

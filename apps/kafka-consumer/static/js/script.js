@@ -67,7 +67,7 @@ function displayMessageDetails(message) {
     // Assuming 'message.text_to_synthesize' contains the text you want to convert to speech
     const textToSynthesize = `${message.summary}`;
 
-    const detailsHtml = `
+    detailsHtml = `
     <div class="message-detail-item">
         <div class="detail-title">
             <h4>${message.id}</h4>
@@ -84,6 +84,13 @@ function displayMessageDetails(message) {
     <div class="message-detail-item"><strong>ℹ️ Additional Information:</strong> ${message.additional_information}</div>
     <div class="message-detail-item"><strong>🗒 Detailed Description:</strong> ${message.detailed_description}</div>
     `;
+
+    // Check if related_documents field exists and append only the Retrieved Chunks
+    if (message.related_documents && message.related_documents.length > 0) {
+        message.related_documents.forEach(doc => {
+            detailsHtml += `<div class="message-detail-item"><strong>📚 Notificações Relacionadas:</strong> ${doc['Retrieved Chunks']}</div>`;
+        });
+    }
 
     // Update the message details as before
     $('#messageDetails').html(detailsHtml)
