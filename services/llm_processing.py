@@ -63,11 +63,6 @@ class LLMProcessor:
         output = json_data if json_data else {}
         return output
 
-    def extract_json_from_audio_data(self, data):
-        #TODO: Implement this method
-        
-        return 0
-
     def process_text_and_extract_data(self, conversation_text):
         conversation_id = str(uuid.uuid4())
         response_data = llm_config.invoke(conversation_text)
@@ -105,7 +100,7 @@ class LLMProcessor:
         
         print(response_data)
         
-        json_data = self.extract_json_from_audio_data(response_data.get('text', '{}'))
+        json_data = self.extract_and_format_json(response_data.get('text', '{}'))
         intent = self.extract_single_intent(response_intent.get('text', '{}'))
 
         response_summary = llm_config.invoke(transcription, template_type='summary_classification')
