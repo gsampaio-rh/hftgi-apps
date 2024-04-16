@@ -8,7 +8,7 @@ let currentProgressId = '';
 
 // Call this function whenever a new message is received
 function onNewMessageReceived(message) {
-    displayChatBallon(message.id, message.sentiment_analysis, message.conversation);
+    displayChatBallon(message.id, message.sentiment, message.conversation);
     displayMessageDetails(message);
     updateTopDepartments(message.department); // Update the departments list
 }
@@ -65,7 +65,7 @@ function displayMessageDetails(message) {
     // audio_file_url = '${ message.audio_file_url }'
 
     // Assuming 'message.text_to_synthesize' contains the text you want to convert to speech
-    const textToSynthesize = "Traffic Department";
+    const textToSynthesize = `${message.summary}`;
 
     const detailsHtml = `
     <div class="message-detail-item">
@@ -87,7 +87,7 @@ function displayMessageDetails(message) {
 
     // Update the message details as before
     $('#messageDetails').html(detailsHtml)
-        .addClass(message.sentiment_analysis.includes("Negative") ? 'flash-negative' : 'flash-positive')
+        .addClass(message.sentiment.includes("Negative") ? 'flash-negative' : 'flash-positive')
         .on('animationend', function () {
             $(this).removeClass('flash-negative flash-positive');
         });
@@ -120,6 +120,7 @@ function updateTopDepartments(department) {
 
 async function toggleAudio(textToSynthesize, progressId) {
     if (currentAudio && currentProgressId !== progressId) {
+        console.log(`Stopping audio for progressId ${currentProgressId}, switching to ${progressId}`);
         currentAudio.pause();
         currentAudio.currentTime = 0;
         document.getElementById(progressId).value = 0;
@@ -128,17 +129,19 @@ async function toggleAudio(textToSynthesize, progressId) {
 
     // Only create a new Audio object if there isn't one already playing for the same message
     if (!currentAudio) {
+        console.log(`Creating new audio for ${progressId}`);
         currentAudio = new Audio();
         currentProgressId = progressId;
 
-        api_audio = "https://tts-api-tts.apps.cluster-45cdc.45cdc.openshift.opentlc.com/synthesize"
+        const api_audio = "https://tts-api-tts.apps.cluster-45cdc.45cdc.openshift.opentlc.com/synthesize";
 
         try {
             const response = await fetch(api_audio, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Accept': 'audio/wav'
+                    'Accept': 'audio/wav',
+                    'Access-Control-Allow-Origin': '*'
                 },
                 body: JSON.stringify({ text: textToSynthesize })
             });
@@ -147,22 +150,25 @@ async function toggleAudio(textToSynthesize, progressId) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
 
+            console.log(`Received audio response for ${progressId} - status: ${response.status}`);
             const audioBlob = await response.blob();
             const audioUrl = URL.createObjectURL(audioBlob);
             currentAudio.src = audioUrl;
 
             // Play the audio
             currentAudio.play();
+            console.log(`Playing audio for ${progressId}`);
             document.getElementById(progressId).style.visibility = 'visible';
 
-            // Move the event listener addition here, inside the condition where currentAudio is guaranteed to be non-null
             currentAudio.addEventListener('timeupdate', () => {
                 const progress = document.getElementById(progressId);
                 const value = (currentAudio.currentTime / currentAudio.duration) * 100;
                 progress.value = value;
+                console.log(`Audio time update for ${progressId}: ${value.toFixed(2)}%`);
             });
 
             currentAudio.addEventListener('ended', () => {
+                console.log(`Audio ended for ${progressId}`);
                 const progress = document.getElementById(progressId);
                 progress.value = 0;
                 progress.style.visibility = 'hidden';
@@ -174,8 +180,10 @@ async function toggleAudio(textToSynthesize, progressId) {
     } else {
         // If currentAudio exists, just toggle play/pause
         if (currentAudio.paused) {
+            console.log(`Resuming audio for ${progressId}`);
             currentAudio.play();
         } else {
+            console.log(`Pausing audio for ${progressId}`);
             currentAudio.pause();
         }
     }
