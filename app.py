@@ -78,19 +78,19 @@ def run_kafka_mode(directory_path, use_vector_memory=False, audio_enabled=False)
 
     files = [join(directory_path, f) for f in listdir(directory_path) if isfile(join(directory_path, f)) and f.endswith('.txt')]
 
-    if audio_enabled:
-        audio = [join(directory_path, f) for f in listdir(directory_path) if isfile(join(directory_path, f)) and f.endswith('.wav')]
+    # if audio_enabled:
+    #     audio = [join(directory_path, f) for f in listdir(directory_path) if isfile(join(directory_path, f)) and f.endswith('.wav')]
 
-        for file_path in audio:
-            logging.info(f"Processing audio file: {file_path}")
-            processed_audio = transcribe_audio(tts_server=config.tts_server, file_path=file_path)
+    #     for file_path in audio:
+    #         logging.info(f"Processing audio file: {file_path}")
+    #         processed_audio = transcribe_audio(tts_server=config.tts_server, file_path=file_path)
 
-            audio_transcription = json.loads(processed_audio).get("transcription")
-            logging.info(f"Transcription: {audio_transcription}")
+    #         audio_transcription = json.loads(processed_audio).get("transcription")
+    #         logging.info(f"Transcription: {audio_transcription}")
 
-            audio_result = processor.process_audio_and_extract_data(audio_transcription)
-            # audio_json=llm_config.invoke(audio_transcription, template_type='audio_extraction')
-            print(audio_result)
+    #         audio_result = processor.process_audio_and_extract_data(audio_transcription)
+    #         # audio_json=llm_config.invoke(audio_transcription, template_type='audio_extraction')
+    #         print(audio_result)
 
     for file_path in files:
         try:
